@@ -1,0 +1,13 @@
+CREATE TABLE IF NOT EXISTS schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS households(id TEXT PRIMARY KEY, name TEXT NOT NULL, state TEXT NOT NULL, revision INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, household_id TEXT NOT NULL REFERENCES households(id), email TEXT NOT NULL UNIQUE COLLATE NOCASE, name TEXT NOT NULL, password_hash TEXT NOT NULL, role TEXT NOT NULL CHECK(role IN ('owner','member')), recovery_hash TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL, created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS sessions_user ON sessions(user_id);
+CREATE TABLE IF NOT EXISTS invitations(token_hash TEXT PRIMARY KEY, household_id TEXT NOT NULL REFERENCES households(id), email TEXT NOT NULL, expires_at INTEGER NOT NULL, created_by TEXT NOT NULL REFERENCES users(id));
+CREATE TABLE IF NOT EXISTS operations(household_id TEXT NOT NULL REFERENCES households(id), id TEXT NOT NULL, fingerprint TEXT NOT NULL, revision INTEGER NOT NULL, PRIMARY KEY(household_id,id));
+CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY, household_id TEXT NOT NULL REFERENCES households(id), actor TEXT NOT NULL, kind TEXT NOT NULL, at TEXT NOT NULL, detail TEXT NOT NULL, changes TEXT NOT NULL, undone INTEGER NOT NULL DEFAULT 0);
+CREATE INDEX IF NOT EXISTS events_household ON events(household_id,at);
+CREATE TABLE IF NOT EXISTS uploads(id TEXT PRIMARY KEY, household_id TEXT NOT NULL REFERENCES households(id), mime TEXT NOT NULL, bytes BLOB NOT NULL, created_at TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS providers(household_id TEXT PRIMARY KEY REFERENCES households(id), config TEXT NOT NULL, secret TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS ai_proposals(id TEXT PRIMARY KEY, household_id TEXT NOT NULL REFERENCES households(id), proposal TEXT NOT NULL, created_at INTEGER NOT NULL, applied INTEGER NOT NULL DEFAULT 0);
+INSERT OR IGNORE INTO schema_migrations(version,applied_at) VALUES(1,datetime('now'));

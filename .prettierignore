@@ -1,0 +1,11 @@
+node_modules
+dist
+.tanstack
+backend/target
+mockups
+public
+src/routeTree.gen.ts
+src/lib/api/
+backend/bindings/
+package-lock.json
+flake.lock

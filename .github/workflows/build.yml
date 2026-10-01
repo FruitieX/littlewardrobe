@@ -1,0 +1,54 @@
+name: Validate and publish
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: littlewardrobe-${{ github.ref }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+        with:
+          extra_nix_config: |
+            experimental-features = nix-command flakes
+      - run: nix develop --command npm ci
+      - run: nix develop --command cargo fmt --manifest-path backend/Cargo.toml -- --check
+      - run: nix develop --command cargo clippy --manifest-path backend/Cargo.toml --all-targets -- -D warnings
+      - run: nix develop --command cargo test --manifest-path backend/Cargo.toml
+      - run: nix develop --command npm run typecheck
+      - run: nix develop --command npm test
+      - run: nix develop --command python3 scripts/hermes-companion.check.py
+      - run: nix develop --command npm run format:check
+      - run: nix develop --command npm run build
+      - run: nix develop --command npm run test:production
+      - run: nix build .#container --out-link result-container
+      - name: Verify the packaged container
+        run: |
+          docker load -i result-container
+          nix develop --command npm run test:container
+      - name: Publish container
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+          docker tag ghcr.io/fruitiex/littlewardrobe:main ghcr.io/fruitiex/littlewardrobe:${{ github.sha }}
+          docker push ghcr.io/fruitiex/littlewardrobe:main
+          docker push ghcr.io/fruitiex/littlewardrobe:${{ github.sha }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-results
+          path: |
+            mockups/
+            test-results/

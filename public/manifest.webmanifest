@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "Little Wardrobe",
+  "short_name": "Little Wardrobe",
+  "description": "Your family wardrobe, from first wear to the next home",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#faf8f2",
+  "theme_color": "#1e4938",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

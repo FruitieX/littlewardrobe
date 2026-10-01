@@ -1,0 +1,1 @@
+These are real production browser screenshots using an isolated test household, deterministic illustrated clothing fixtures and a controlled AI provider. The running app starts empty. Regenerate with `nix develop --command npm run test:production`.
