@@ -26,6 +26,7 @@ import {
 import { useApp } from '../lib/state'
 import { api, post, uploadImage } from '../lib/http'
 import { Modal, SectionTitle } from './ui'
+import { WardrobeMark, WardrobeRail } from './WardrobeIdentity'
 import { ConnectionStatus } from './ConnectionStatus'
 import { AccountSettings } from './AccountSettings'
 import { AISettings } from './AISettings'
@@ -119,7 +120,7 @@ export function Wardrobe() {
           aria-label="Little Wardrobe home"
         >
           <span>
-            <Shirt size={22} />
+            <WardrobeMark size={40} />
           </span>
           little wardrobe<span className="tiny-dot">.</span>
         </a>
@@ -135,6 +136,7 @@ export function Wardrobe() {
             <button
               key={t.id}
               className={tab === t.id ? 'selected' : ''}
+              aria-current={tab === t.id ? 'page' : undefined}
               onClick={() => setTab(t.id)}
             >
               <t.icon size={18} />
@@ -173,12 +175,12 @@ export function Wardrobe() {
             <section className="wardrobe-intro">
               <div>
                 <div className="wardrobe-eyebrow">
-                  SMALL CLOTHES. BIG ADVENTURES.
+                  YOUR FAMILY’S CLOTHES NOTEBOOK
                 </div>
                 <h1>
-                  A little room
+                  Small clothes
                   <br />
-                  to grow<span>.</span>
+                  big days<span>.</span>
                 </h1>
                 <p>
                   What fits today. What’s tucked away.
@@ -193,51 +195,45 @@ export function Wardrobe() {
                 </button>
               </div>
               <div className="intro-art" aria-hidden="true">
-                <div className="art-hanger" />
-                <div className="art-sweater">
-                  <Shirt strokeWidth={0.9} />
-                </div>
+                <WardrobeRail />
                 <div className="art-card">
-                  <Sparkles size={15} />
-                  <span>A photo is a great start</span>
+                  <Camera size={15} />
+                  <span>Start with a quick photo</span>
                 </div>
-                <span className="art-spark a">✧</span>
-                <span className="art-spark b">✳</span>
-                <span className="art-size">room to grow</span>
               </div>
             </section>
             <div className="wardrobe-stats">
               {[
-                { label: 'In your wardrobe', n: owned.length, icon: Shirt },
+                {
+                  label: 'In your wardrobe',
+                  n: owned.length,
+                  icon: Shirt,
+                  filter: 'owned',
+                },
                 {
                   label: 'In rotation',
+                  filter: 'active',
                   n: garments.filter((g) => g.status === 'active').length,
                   icon: RotateCcw,
                 },
                 {
                   label: 'Saved for later',
+                  filter: 'stored',
                   n: garments.filter((g) => g.status === 'stored').length,
                   icon: Box,
                 },
                 {
                   label: 'Ready to sell',
+                  filter: 'sell',
                   n: garments.filter((g) => g.status === 'sell').length,
                   icon: Tag,
                 },
               ].map((s) => (
                 <button
                   key={s.label}
-                  onClick={() =>
-                    setFilter(
-                      s.label === 'In your wardrobe'
-                        ? 'owned'
-                        : s.label === 'In rotation'
-                          ? 'active'
-                          : s.label === 'Saved for later'
-                            ? 'stored'
-                            : 'sell',
-                    )
-                  }
+                  className={filter === s.filter ? 'selected' : ''}
+                  aria-pressed={filter === s.filter}
+                  onClick={() => setFilter(s.filter)}
                 >
                   <span className="stat-icon">
                     <s.icon size={20} />

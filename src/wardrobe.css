@@ -1,12 +1,12 @@
 .wardrobe-app {
-  color: #263e34;
+  color: #262f3e;
   background: #faf9f5;
   min-height: 100vh;
   font-family: 'DM Sans', sans-serif;
 }
 .wardrobe-header {
   height: 88px;
-  border-bottom: 1px solid #e8e9e2;
+  border-bottom: 1px solid #e2e4e9;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -21,7 +21,7 @@
   font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.7px;
-  color: #264939;
+  color: #263349;
   text-decoration: none;
   white-space: nowrap;
 }
@@ -31,7 +31,7 @@
   display: grid;
   place-items: center;
   border-radius: 11px;
-  background: #e9efde;
+  background: #dee4ef;
 }
 .tiny-dot {
   color: #d8916e;
@@ -47,7 +47,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #7a8277;
+  color: #6a788f;
   font-size: 14px;
   border: 0;
   border-bottom: 3px solid transparent;
@@ -55,8 +55,8 @@
   padding: 0 3px;
 }
 .wardrobe-header nav button.selected {
-  color: #284d3a;
-  border-bottom-color: #31553d;
+  color: #28364d;
+  border-bottom-color: #313e55;
 }
 .wardrobe-header nav i {
   width: 5px;
@@ -69,7 +69,7 @@
 }
 .household-label {
   font-size: 12px;
-  color: #758071;
+  color: #66748b;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -78,7 +78,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #92aa86;
+  background: #8693aa;
 }
 .sync-dot.offline {
   background: #d59b69;
@@ -99,12 +99,12 @@
   font-size: 10px;
   letter-spacing: 2px;
   font-weight: 700;
-  color: #79886d;
+  color: #68768d;
   margin-bottom: 16px;
 }
 .wardrobe-intro h1,
 .page-intro h1 {
-  font-family: Fraunces, serif;
+  font-family: 'DM Sans', sans-serif;
   font-weight: 500;
   font-size: 58px;
   line-height: 1.09;
@@ -119,14 +119,14 @@
 .page-intro p {
   font-size: 15px;
   line-height: 1.75;
-  color: #848a7e;
+  color: #727f96;
   margin: 0 0 24px;
 }
 .wardrobe-app .primary-button {
   border-radius: 10px;
-  background: #315640;
+  background: #313f56;
   color: #fff;
-  border: 1px solid #315640;
+  border: 1px solid #313f56;
   min-height: 44px;
   font-size: 13px;
   font-weight: 600;
@@ -140,13 +140,13 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  border: 1px solid #e1e4da;
+  border: 1px solid #dadee4;
   background: #fffefa;
   border-radius: 9px;
   min-height: 42px;
   font-size: 12px;
   font-weight: 600;
-  color: #53644f;
+  color: #4c5667;
   padding: 9px 14px;
   gap: 7px;
   text-decoration: none;
@@ -194,18 +194,18 @@
   align-items: center;
   gap: 9px;
   background: #fffefa;
-  box-shadow: 0 8px 28px #737c4620;
-  border: 1px solid #e3e7d7;
+  box-shadow: 0 8px 28px #465a7c20;
+  border: 1px solid #d7dde7;
   padding: 15px 19px;
   border-radius: 10px;
   font-size: 11px;
   font-weight: 500;
-  color: #758569;
+  color: #657289;
   transform: rotate(3deg);
 }
 .art-spark {
   position: absolute;
-  color: #74916b;
+  color: #6b7991;
   font-size: 36px;
 }
 .art-spark.a {
@@ -222,10 +222,10 @@
   position: absolute;
   right: -34px;
   bottom: 44px;
-  font-family: Fraunces, serif;
+  font-family: 'DM Sans', sans-serif;
   font-style: italic;
   font-size: 15px;
-  color: #8d916e;
+  color: #6c7a93;
   transform: rotate(6deg);
 }
 .wardrobe-stats {
@@ -252,8 +252,8 @@
   border: 0;
 }
 .stat-icon {
-  background: #edf0e4;
-  color: #7d8a6e;
+  background: #e4e8f0;
+  color: #69778f;
   padding: 12px;
   border-radius: 50%;
   display: flex;
@@ -275,7 +275,7 @@
 .wardrobe-stats div > span {
   display: block;
   font-size: 10px;
-  color: #828879;
+  color: #6e7b93;
   margin-top: 5px;
 }
 .inventory-heading {
@@ -287,7 +287,7 @@
 }
 .inventory-heading h2,
 .section-heading h2 {
-  font-family: Fraunces, serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 25px;
   font-weight: 500;
   letter-spacing: -0.6px;
@@ -297,7 +297,7 @@
   font-family: 'DM Sans', sans-serif;
   font-size: 11px;
   font-weight: 400;
-  background: #ecefe4;
+  background: #e4e8ef;
   padding: 5px 8px;
   border-radius: 8px;
   vertical-align: middle;
@@ -312,22 +312,22 @@
   align-items: center;
   gap: 7px;
   background: transparent;
-  border: 1px solid #e8e9df;
+  border: 1px solid #dfe3e9;
   border-radius: 30px;
   padding: 9px 14px;
   font-size: 12px;
-  color: #818773;
+  color: #6a7890;
 }
 .children-tabs button.active {
-  background: #e7ecdf;
-  border-color: #e7ecdf;
-  color: #385139;
+  background: #dfe4ec;
+  border-color: #dfe4ec;
+  color: #384151;
 }
 .child-dot {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #99ad83;
+  background: #8392ad;
 }
 .child-dot.peach {
   background: #d79d7e;
@@ -345,14 +345,14 @@
 }
 .search-field {
   background: #fffefb;
-  border: 1px solid #e4e7dc;
+  border: 1px solid #dce0e7;
   display: flex;
   gap: 10px;
   align-items: center;
   padding: 11px 15px;
   border-radius: 10px;
   flex: 1;
-  color: #89957e;
+  color: #78859b;
 }
 .search-field input {
   border: 0;
@@ -361,14 +361,14 @@
   min-height: 20px;
   width: 100%;
   font-size: 12px;
-  color: #485d45;
+  color: #454e5d;
   padding: 0;
 }
 .search-field input:focus {
   box-shadow: none;
 }
 .search-field input::placeholder {
-  color: #92988a;
+  color: #808da2;
 }
 .status-tabs {
   display: flex;
@@ -383,12 +383,12 @@
   border: 0;
   border-bottom: 2px solid transparent;
   padding: 8px 0;
-  color: #8a9082;
+  color: #77849b;
   font-size: 11px;
 }
 .status-tabs button.active {
-  color: #3d5e3c;
-  border-color: #6f8a58;
+  color: #3c485e;
+  border-color: #586a8a;
 }
 .garment-grid {
   display: grid;
@@ -397,7 +397,7 @@
 }
 .garment-card {
   padding: 0;
-  border: 1px solid #e5e7dc;
+  border: 1px solid #dce0e7;
   background: #fffefb;
   text-align: left;
   overflow: hidden;
@@ -409,7 +409,7 @@
 }
 .garment-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 9px 25px #293a2810;
+  box-shadow: 0 9px 25px #282f3a10;
 }
 .garment-image {
   height: 205px;
@@ -417,7 +417,7 @@
   position: relative;
   display: grid;
   place-items: center;
-  color: #a4ac95;
+  color: #929daf;
 }
 .garment-image.tops {
   background: #eee8de;
@@ -428,8 +428,8 @@
   color: #b3a27b;
 }
 .garment-image.outerwear {
-  background: #e2e8e3;
-  color: #8c9d8b;
+  background: #e1e4e9;
+  color: #8490a4;
 }
 .garment-image.shoes {
   background: #f0e8df;
@@ -453,7 +453,7 @@
   font-size: 10px;
   font-weight: 600;
   padding: 6px 9px;
-  color: #677060;
+  color: #586478;
   backdrop-filter: blur(8px);
 }
 .keepsake-heart {
@@ -470,7 +470,7 @@
   font-size: 9px;
   text-transform: uppercase;
   letter-spacing: 1px;
-  color: #989b8b;
+  color: #838fa3;
   margin-bottom: 5px;
 }
 .garment-card h3 {
@@ -489,7 +489,7 @@
 }
 .garment-card-meta > span:last-child {
   font-size: 10px;
-  color: #999c8e;
+  color: #8591a5;
   white-space: nowrap;
 }
 .wardrobe-pill {
@@ -498,8 +498,8 @@
   padding: 5px 7px;
   display: inline-flex;
   align-items: center;
-  background: #eaf0e4;
-  color: #698357;
+  background: #e4e8f0;
+  color: #576783;
   gap: 4px;
 }
 .wardrobe-pill.peach {
@@ -516,23 +516,23 @@
 }
 .wardrobe-pill.white {
   background: #ffffff80;
-  color: #5e7359;
+  color: #576275;
 }
 .wardrobe-empty {
-  border: 1px dashed #dfe4d3;
+  border: 1px dashed #d3d9e4;
   border-radius: 12px;
   padding: 44px 20px;
   text-align: center;
-  color: #76866b;
+  color: #66748b;
   margin: 15px 0 24px;
-  background: #f4f5ed;
+  background: #edf0f5;
 }
 .wardrobe-empty > span {
   display: flex;
   justify-content: center;
 }
 .wardrobe-empty h3 {
-  font-family: Fraunces, serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 23px;
   font-weight: 500;
   margin: 16px 0 9px;
@@ -540,7 +540,7 @@
 .wardrobe-empty p {
   font-size: 12px;
   line-height: 1.7;
-  color: #929985;
+  color: #7e8ba0;
   margin: 0 auto 20px;
   max-width: 340px;
 }
@@ -552,8 +552,8 @@
   align-items: center;
   gap: 8px;
   font-size: 10px;
-  color: #a4aa99;
-  border-top: 1px solid #e7e9de;
+  color: #939eb0;
+  border-top: 1px solid #dee2e9;
   margin-top: 58px;
   padding: 24px 0 32px;
 }
@@ -573,7 +573,7 @@
 }
 .wardrobe-app .settings-card {
   background: #fffefb;
-  border-color: #e5e7dc;
+  border-color: #dce0e7;
 }
 .wardrobe-app .section-heading {
   display: flex;
@@ -593,13 +593,13 @@
   gap: 12px;
   margin: 5px 0 23px;
   padding: 18px;
-  background: #eeefe7;
+  background: #e7eaef;
   border-radius: 10px;
 }
 .filter-grid label,
 .sale-draft-actions > label {
   font-size: 11px;
-  color: #7c8972;
+  color: #6b7890;
   display: flex;
   flex-direction: column;
   gap: 7px;
@@ -607,11 +607,11 @@
 .filter-grid input,
 .filter-grid select,
 .sale-draft-actions select {
-  border: 1px solid #e0e4d8;
+  border: 1px solid #d8dce4;
   border-radius: 7px;
   padding: 10px;
   font-size: 12px;
-  color: #59694d;
+  color: #4d5769;
   background: #fffefb;
   min-width: 0;
 }
@@ -621,12 +621,12 @@
   gap: 18px;
 }
 .child-card {
-  background: #eaf0e4;
-  border: 1px solid #dfe7d6;
+  background: #e4e8f0;
+  border: 1px solid #d6dce7;
   border-radius: 13px;
   padding: 26px;
   text-align: left;
-  color: #425e3f;
+  color: #3f4a5e;
 }
 .child-card.peach {
   background: #f7ece3;
@@ -650,11 +650,11 @@
   background: #ffffff70;
   display: grid;
   place-items: center;
-  font-family: Fraunces, serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 25px;
 }
 .child-card h3 {
-  font-family: Fraunces, serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 28px;
   font-weight: 500;
   margin: 14px 0 3px;
@@ -686,7 +686,7 @@
   gap: 14px;
 }
 .location-card {
-  border: 1px solid #e4e7db;
+  border: 1px solid #dbdfe7;
   border-radius: 10px;
   background: #fffefa;
 }
@@ -699,18 +699,18 @@
   width: 100%;
   border: 0;
   background: none;
-  color: #77896d;
+  color: #69768d;
 }
 .location-card > button strong {
   display: block;
   font-size: 13px;
   font-weight: 500;
-  color: #4c6246;
+  color: #465062;
 }
 .location-card small {
   display: block;
   font-size: 10px;
-  color: #9a9f8d;
+  color: #8692a6;
   margin-top: 4px;
 }
 .location-card > button > span:last-child {
@@ -723,18 +723,18 @@
 }
 .location-card > div button {
   border: 0;
-  border-top: 1px solid #eff0e8;
+  border-top: 1px solid #e8ebf0;
   background: none;
   padding: 11px 0;
   display: flex;
   justify-content: space-between;
   width: 100%;
   font-size: 11px;
-  color: #8b9680;
+  color: #7a869c;
 }
 .fit-suggestions {
-  border: 1px solid #e3e6d8;
-  background: #f0f2e7;
+  border: 1px solid #d8dde6;
+  background: #e7ebf2;
   border-radius: 12px;
   padding: 24px;
   margin-top: 34px;
@@ -743,29 +743,29 @@
   display: flex;
   align-items: center;
   gap: 11px;
-  color: #8c9b70;
+  color: #70809b;
 }
 .fit-suggestions h2 {
   margin: 0;
-  font-family: Fraunces, serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 22px;
   font-weight: 500;
-  color: #586c4c;
+  color: #4c586c;
 }
 .fit-suggestions p {
   font-size: 11px;
-  color: #8e977f;
+  color: #7a869c;
 }
 .fit-suggestions > button {
   width: 100%;
   border: 0;
-  border-top: 1px solid #e2e7d4;
+  border-top: 1px solid #d4dbe7;
   background: none;
   padding: 12px 0;
   display: flex;
   justify-content: space-between;
   font-size: 11px;
-  color: #677c55;
+  color: #55637c;
   gap: 10px;
   text-align: left;
 }
@@ -774,7 +774,7 @@
   gap: 10px;
   align-items: center;
   font-size: 10px;
-  color: #8c977d;
+  color: #78859c;
 }
 .wardrobe-app .modal-content {
   background: #fffefa;
@@ -785,8 +785,8 @@
 }
 .photo-intake {
   padding: 16px;
-  border: 1px dashed #d8dfcc;
-  background: #f5f6ed;
+  border: 1px dashed #ccd3df;
+  background: #edf0f6;
   border-radius: 11px;
 }
 .photo-strip {
@@ -824,7 +824,7 @@
   border-radius: 50%;
   padding: 3px;
   display: flex;
-  color: #879275;
+  color: #717f96;
 }
 .photo-actions {
   display: flex;
@@ -839,18 +839,18 @@
 .editor-form small {
   font-size: 10px;
   line-height: 1.6;
-  color: #919b81;
+  color: #7d899f;
 }
 .ai-button {
-  border: 1px solid #d9e3cd;
-  background: #edf3e5;
+  border: 1px solid #cdd5e3;
+  background: #e5eaf3;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 9px;
   padding: 13px;
   border-radius: 9px;
-  color: #698350;
+  color: #506383;
   font-size: 12px;
   font-weight: 600;
 }
@@ -858,7 +858,7 @@
 .review-note {
   font-size: 11px;
   line-height: 1.7;
-  color: #8e987f;
+  color: #7a879d;
   display: flex;
   align-items: flex-start;
   gap: 7px;
@@ -888,13 +888,13 @@
 }
 .editor-form details summary {
   font-size: 12px;
-  color: #7d8d6d;
+  color: #6a7890;
   cursor: pointer;
   padding: 8px 0;
 }
 .editor-form details > p {
   font-size: 11px;
-  color: #8a957e;
+  color: #78859b;
   line-height: 1.7;
 }
 .editor-footer {
@@ -903,7 +903,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 9px;
-  border-top: 1px solid #e7e9df;
+  border-top: 1px solid #dfe3e9;
   padding-top: 18px;
   margin-top: 7px;
 }
@@ -915,7 +915,7 @@
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: #82956e;
+  color: #6e7c95;
 }
 .sell-selection {
   display: grid;
@@ -927,17 +927,17 @@
   align-items: center;
   gap: 12px;
   background: #fffefa;
-  border: 1px solid #e3e7d9;
+  border: 1px solid #d9dee7;
   border-radius: 10px;
   padding: 12px;
   cursor: pointer;
 }
 .sell-selection label.selected {
-  background: #f0f4e7;
-  border-color: #afc196;
+  background: #e7ecf4;
+  border-color: #96a6c1;
 }
 .sell-selection input {
-  accent-color: #678253;
+  accent-color: #536482;
   flex-shrink: 0;
 }
 .sell-thumb {
@@ -964,7 +964,7 @@
 .sell-selection span {
   display: block;
   font-size: 10px;
-  color: #949d87;
+  color: #828ea2;
   margin-top: 5px;
 }
 .sale-draft-actions {
@@ -988,25 +988,25 @@
 .listing-card {
   text-align: left;
   position: relative;
-  border: 1px solid #e2e6d8;
+  border: 1px solid #d8dde6;
   background: #fffefa;
   border-radius: 11px;
   padding: 23px;
-  color: #586c4d;
+  color: #4d586c;
 }
 .listing-card > div {
   display: flex;
   gap: 7px;
 }
 .listing-card h3 {
-  font-family: Fraunces, serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 20px;
   font-weight: 500;
   margin: 17px 0 8px;
 }
 .listing-card p {
   font-size: 10px;
-  color: #919c83;
+  color: #7f8ba0;
 }
 .listing-card > strong {
   font-size: 18px;
@@ -1016,17 +1016,17 @@
   position: absolute;
   bottom: 23px;
   right: 21px;
-  color: #8c9d75;
+  color: #75849d;
 }
 .listing-item-summary {
   display: flex;
   gap: 7px;
   flex-wrap: wrap;
   font-size: 10px;
-  color: #859173;
+  color: #6f7d95;
 }
 .listing-item-summary span {
-  background: #edf1e5;
+  background: #e5e9f1;
   border-radius: 6px;
   padding: 7px;
 }
@@ -1046,11 +1046,11 @@
   padding: 2px;
   display: block;
   font-size: 9px;
-  color: #919b82;
+  color: #7e8a9f;
 }
 .listing-photos label.selected {
-  border-color: #8ea879;
-  background: #f2f5e8;
+  border-color: #798aa8;
+  background: #e8edf5;
 }
 .listing-photos img {
   width: 84px;
@@ -1066,7 +1066,7 @@
   position: absolute;
   top: 7px;
   right: 7px;
-  accent-color: #718959;
+  accent-color: #596b89;
 }
 .listing-photos span {
   display: block;
@@ -1080,7 +1080,7 @@
   background: #f6f3e8;
 }
 .approval-box h3 {
-  font-family: Fraunces, serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 22px;
   font-weight: 500;
   margin: 0 0 9px;
@@ -1090,7 +1090,7 @@
 }
 .approval-box p {
   font-size: 11px;
-  color: #92977f;
+  color: #7a869c;
   line-height: 1.7;
 }
 .approval-box small {
@@ -1098,8 +1098,8 @@
   margin-bottom: 10px;
 }
 .approval-box.approved {
-  background: #eff5e8;
-  border-color: #d9e6ce;
+  background: #e8edf5;
+  border-color: #ced7e6;
 }
 .export-actions {
   display: flex;
@@ -1107,7 +1107,7 @@
   gap: 9px;
 }
 .success-note {
-  color: #6c8852;
+  color: #526688;
   font-size: 12px;
 }
 .sync-banner {
@@ -1135,7 +1135,7 @@
 button:focus-visible,
 a:focus-visible,
 summary:focus-visible {
-  outline: 3px solid #9bad77;
+  outline: 3px solid #778bad;
   outline-offset: 3px;
 }
 @media (max-width: 900px) {
@@ -1189,7 +1189,7 @@ summary:focus-visible {
     background: #fffefa;
     height: 70px;
     padding-bottom: env(safe-area-inset-bottom);
-    border-top: 1px solid #e2e5d9;
+    border-top: 1px solid #d9dde5;
     justify-content: space-around;
     gap: 0;
   }
@@ -1203,9 +1203,9 @@ summary:focus-visible {
     min-width: 65px;
   }
   .wardrobe-header nav button.selected {
-    background: #f1f4e9;
-    border-top: 2px solid #869b6e;
-    color: #5a7848;
+    background: #e9edf4;
+    border-top: 2px solid #6e7e9b;
+    color: #485a78;
   }
   .wardrobe-header nav i {
     top: 11px;
@@ -1486,5 +1486,447 @@ summary:focus-visible {
 @media (max-width: 900px) {
   .art-size {
     right: -8px;
+  }
+}
+
+/* Little Wardrobe: denim, apricot and stitched clothing labels. */
+:root {
+  --forest: #244f8f;
+  --ink: #1e2c46;
+  --muted: #63718a;
+  --line: #dbe2ee;
+  --cream: #f5f7fb;
+  --lime: #e4edfc;
+  --color-forest: #244f8f;
+  --font-display: 'DM Sans', sans-serif;
+}
+body,
+.wardrobe-app {
+  background: #f5f7fb;
+  color: #1e2c46;
+}
+.wardrobe-header {
+  background: #244f8f;
+  border-bottom: 4px solid #f08f71;
+}
+.wardrobe-brand {
+  color: #fff;
+  letter-spacing: -0.6px;
+}
+.wardrobe-brand > span:first-child {
+  background: transparent;
+  width: 40px;
+  height: 40px;
+}
+.tiny-dot {
+  color: #ffd0bd;
+}
+.wardrobe-header nav {
+  height: auto;
+  gap: 4px;
+  background: #193f77;
+  padding: 5px;
+  border-radius: 14px;
+}
+.wardrobe-header nav button {
+  min-height: 44px;
+  color: #dce7f9;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 600;
+}
+.wardrobe-header nav button.selected {
+  color: #244f8f;
+  background: #fff;
+  border: 0;
+}
+.wardrobe-header nav i {
+  top: 8px;
+  right: 8px;
+  background: #f08f71;
+}
+.household-label {
+  color: #e4edfc;
+}
+.wardrobe-header .connection-status {
+  background: #ffffff18;
+  color: #fff;
+  border-color: #ffffff40;
+}
+.sync-dot {
+  background: #ffd0bd;
+}
+.wardrobe-intro {
+  margin: 30px 0 24px;
+  padding: 32px 38px;
+  gap: 32px;
+  border: 1px dashed #b4c5e0;
+  border-radius: 24px;
+  background:
+    radial-gradient(#b7c9e438 0.8px, transparent 0.8px) 0 0 / 12px 12px,
+    #eaf0fb;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+}
+.wardrobe-eyebrow {
+  color: #536a91;
+  letter-spacing: 1.6px;
+}
+.wardrobe-intro h1,
+.page-intro h1 {
+  font-weight: 700;
+  letter-spacing: -2.2px;
+}
+.wardrobe-intro h1 span,
+.page-intro h1 span {
+  color: #cb6b53;
+}
+.wardrobe-intro p,
+.page-intro p {
+  color: #53627b;
+}
+.intro-art {
+  width: min(100%, 340px);
+  height: 270px;
+  min-height: 0;
+  background: transparent;
+  border-radius: 0;
+  transform: none;
+}
+.wardrobe-rail {
+  width: 100%;
+  height: auto;
+}
+.art-card {
+  left: auto;
+  bottom: 0;
+  padding: 12px 16px;
+  border: 1px dashed #b4c5e0;
+  border-radius: 8px;
+  color: #244f8f;
+  background: #fffaf5;
+  box-shadow: 0 5px 12px #244f8f0d;
+  transform: rotate(-3deg);
+  font-size: 12px;
+}
+.primary-button,
+.wardrobe-app .primary-button {
+  background: #244f8f;
+  border-color: #244f8f;
+  border-radius: 12px;
+  min-height: 44px;
+  font-weight: 700;
+}
+.primary-button:hover,
+.wardrobe-app .primary-button:hover {
+  background: #193f77;
+  border-color: #193f77;
+}
+.secondary-button,
+.wardrobe-app .secondary-button {
+  color: #244f8f;
+  background: #fff;
+  border-color: #cdd8e9;
+  border-radius: 10px;
+  min-height: 44px;
+}
+.secondary-button:hover {
+  background: #eaf0fb;
+}
+.wardrobe-stats {
+  gap: 10px;
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+.wardrobe-stats button {
+  border: 1px solid #dbe2ee;
+  border-radius: 14px;
+  background: #fff;
+  padding: 21px 18px;
+  gap: 12px;
+  text-align: left;
+}
+.wardrobe-stats button:last-child {
+  border-right: 1px solid #dbe2ee;
+}
+.wardrobe-stats button.selected {
+  border-color: #244f8f;
+  background: #eaf0fb;
+  box-shadow: inset 0 0 0 1px #244f8f;
+}
+.wardrobe-stats button:hover {
+  background: #eaf0fb;
+}
+.wardrobe-stats strong {
+  color: #244f8f;
+  font-weight: 700;
+}
+.wardrobe-stats div > span {
+  font-size: 12px;
+  color: #53627b;
+}
+.stat-icon {
+  background: #eaf0fb;
+  color: #244f8f;
+  border-radius: 12px;
+}
+.inventory-heading h2,
+.section-heading h2,
+.child-card h3,
+.listing-card h3,
+.modal-title,
+.auth-card h1 {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.7px;
+}
+.children-tabs button.active {
+  background: #244f8f;
+  border-color: #244f8f;
+  color: #fff;
+}
+.status-tabs button {
+  color: #63718a;
+  font-size: 12px;
+}
+.status-tabs button.active {
+  color: #244f8f;
+  border-color: #244f8f;
+  font-weight: 700;
+}
+.garment-card {
+  border-color: #dbe2ee;
+  border-radius: 16px;
+  box-shadow: 0 3px 10px #244f8f06;
+}
+.garment-card:hover {
+  box-shadow: 0 8px 24px #244f8f15;
+}
+.garment-image {
+  background: #edf1f8;
+}
+.size-label {
+  color: #244f8f;
+  border: 1px dashed #9eb4d8;
+  border-radius: 5px;
+  background: #fffaf5;
+  font-weight: 700;
+}
+.garment-card-meta,
+.garment-card-body p {
+  color: #63718a;
+}
+.wardrobe-pill {
+  font-size: 11px;
+}
+.form label,
+.ai-form label {
+  color: #405475;
+}
+.form input,
+.form select,
+.form textarea,
+.search-field {
+  border-color: #cdd8e9;
+}
+.modal-overlay {
+  background: #142b4dc9;
+  backdrop-filter: blur(3px);
+}
+.modal-content {
+  border: 1px solid #dbe2ee;
+  border-top: 5px solid #f08f71;
+  border-radius: 20px;
+  background: #fff;
+}
+.modal-title {
+  color: #244f8f;
+}
+.modal-description {
+  color: #63718a;
+}
+.auth-page {
+  background:
+    radial-gradient(#b7c9e445 1px, transparent 1px) 0 0 / 16px 16px,
+    #eaf0fb;
+}
+.auth-brand {
+  color: #244f8f;
+  font-weight: 700;
+}
+.auth-brand > span:first-child {
+  background: transparent;
+}
+.auth-card {
+  background: #fff;
+  border: 1px solid #dbe2ee;
+  border-top: 5px solid #f08f71;
+  box-shadow: 0 15px 50px #244f8f0d;
+  border-radius: 20px;
+}
+.auth-card h1 {
+  color: #244f8f;
+}
+.heading-dot {
+  color: #cb6b53;
+}
+button,
+a,
+input,
+select,
+textarea {
+  outline-offset: 4px;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid #d4785c;
+}
+@media (max-width: 900px) and (min-width: 601px) {
+  .wardrobe-header {
+    gap: 12px;
+    padding: 0 20px;
+  }
+  .wardrobe-brand {
+    font-size: 19px;
+  }
+  .wardrobe-header nav button {
+    padding: 10px;
+  }
+  .wardrobe-intro {
+    padding: 30px;
+  }
+  .wardrobe-intro h1 {
+    font-size: 48px;
+  }
+  .wardrobe-stats button {
+    padding: 18px 12px;
+  }
+  .wardrobe-stats div > span {
+    font-size: 11px;
+  }
+}
+@media (max-width: 600px) {
+  .wardrobe-header {
+    height: 73px;
+  }
+  .wardrobe-brand {
+    font-size: 22px;
+  }
+  .wardrobe-header nav {
+    left: 10px;
+    right: 10px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    height: 66px;
+    border: 1px solid #cdd8e9;
+    border-radius: 18px;
+    padding: 5px;
+    gap: 3px;
+    background: #fff;
+    box-shadow: 0 6px 25px #193f7730;
+  }
+  .wardrobe-header nav button {
+    flex: 1;
+    min-width: 0;
+    padding: 6px 4px;
+    color: #63718a;
+    font-size: 11px;
+  }
+  .wardrobe-header nav button.selected {
+    background: #244f8f;
+    color: #fff;
+    border: 0;
+    border-radius: 12px;
+  }
+  .wardrobe-main {
+    padding: 0 16px calc(100px + env(safe-area-inset-bottom));
+  }
+  .wardrobe-intro {
+    margin: 20px 0;
+    padding: 22px 18px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    position: relative;
+  }
+  .wardrobe-intro h1 {
+    font-size: clamp(36px, 10vw, 44px);
+    letter-spacing: -1.5px;
+    margin-bottom: 12px;
+  }
+  .wardrobe-eyebrow {
+    font-size: 9px;
+    letter-spacing: 1.1px;
+    margin-bottom: 12px;
+  }
+  .wardrobe-intro p {
+    font-size: 13px;
+    max-width: 260px;
+  }
+  .wardrobe-intro .primary-button {
+    font-size: 13px;
+    min-height: 44px;
+    padding: 10px 16px;
+  }
+  .intro-art {
+    width: 180px;
+    height: 150px;
+    justify-self: end;
+    margin: -28px 0 0;
+  }
+  .art-card {
+    bottom: -8px;
+    padding: 6px 9px;
+    font-size: 9px;
+  }
+  .art-card svg {
+    width: 13px;
+    height: 13px;
+  }
+  .wardrobe-stats {
+    gap: 8px;
+    margin-bottom: 28px;
+  }
+  .wardrobe-stats button {
+    padding: 15px 12px;
+    border: 1px solid #dbe2ee;
+    gap: 9px;
+  }
+  .wardrobe-stats button:nth-child(2),
+  .wardrobe-stats button:nth-child(3) {
+    border: 1px solid #dbe2ee;
+  }
+  .wardrobe-stats button.selected {
+    border-color: #244f8f;
+  }
+  .stat-icon {
+    padding: 8px;
+  }
+  .wardrobe-stats div > span {
+    font-size: 10px;
+  }
+  .status-tabs button,
+  .search-field input {
+    font-size: 12px;
+  }
+  .status-tabs {
+    gap: 14px;
+  }
+  .auth-brand {
+    font-size: 25px;
+  }
+  .auth-card h1 {
+    font-size: 29px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
   }
 }

@@ -1,6 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog'
-import { X, ShoppingBasket, ArrowUpRight } from 'lucide-react'
+import { X, ArrowUpRight } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { WardrobeMark } from './WardrobeIdentity'
 import { APP_NAME } from '../lib/brand'
 import { FoodIcon } from './FoodIcon'
 
@@ -8,7 +9,7 @@ export function Brand() {
   return (
     <span className="brand">
       <span className="brand-mark">
-        <ShoppingBasket size={23} strokeWidth={1.8} />
+        <WardrobeMark size={32} />
       </span>
       <span>{APP_NAME}</span>
       <span className="brand-dot">.</span>

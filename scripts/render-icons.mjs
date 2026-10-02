@@ -7,7 +7,7 @@ try {
   for (const size of [192, 512]) {
     await page.setViewportSize({ width: size, height: size })
     await page.setContent(
-      `<style>body{margin:0;background:#315640}svg{width:100vw;height:100vh}</style>${svg}`,
+      `<style>body{margin:0;background:#244f8f}svg{width:100vw;height:100vh}</style>${svg}`,
     )
     await page.screenshot({ path: `public/icon-${size}.png` })
   }

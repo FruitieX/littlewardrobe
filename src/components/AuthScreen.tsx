@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Shirt, ArrowRight, KeyRound, LoaderCircle } from 'lucide-react'
+import { ArrowRight, KeyRound, LoaderCircle } from 'lucide-react'
+import { WardrobeMark } from './WardrobeIdentity'
 import type { SessionInfo } from '../lib/api/SessionInfo'
 import { api, post } from '../lib/http'
 
@@ -55,7 +56,7 @@ export function AuthScreen({
     <main className="auth-page">
       <div className="auth-brand">
         <span>
-          <Shirt size={30} />
+          <WardrobeMark size={48} />
         </span>
         Little Wardrobe<span className="heading-dot">.</span>
       </div>

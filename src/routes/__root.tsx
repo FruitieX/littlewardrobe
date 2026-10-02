@@ -18,7 +18,7 @@ export const Route = createRootRoute({
         content: 'width=device-width, initial-scale=1, viewport-fit=cover',
       },
       { title: `${APP_NAME} · Room to grow.` },
-      { name: 'theme-color', content: '#1e4938' },
+      { name: 'theme-color', content: '#244f8f' },
       {
         name: 'description',
         content: 'A shared family wardrobe, from first wear to the next home.',

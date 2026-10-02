@@ -1,6 +1,6 @@
 # Little Wardrobe product and implementation plan
 
-Build a working family application in `/home/rasse/clothes` to manage the children’s clothes from purchase through daily use, storage, hand-me-downs and resale. The user requested a complete application with AI assistance for photo intake and sale preparation. This document preserves the agreed scope, practical constraints, implementation decisions and progress so work can continue across sessions.
+Build a working family application in `/home/rasse/littlewardrobe` to manage the children’s clothes from purchase through daily use, storage, hand-me-downs and resale. The user requested a complete application with AI assistance for photo intake and sale preparation. This document preserves the agreed scope, practical constraints, implementation decisions and progress so work can continue across sessions.
 
 ## Agreed requirements
 
@@ -97,3 +97,14 @@ Deployment result: homelab revision `273db55` reconciled successfully; Flux is R
 ## Product copy cleanup — 2026-10-02
 
 Removed references to the originating project from the README, deployment guide and plan so Little Wardrobe is described independently. A source and asset search confirmed the runtime application already uses its own branding. This change updates documentation only.
+
+## Distinct visual identity and personal AI — 2026-10-02
+
+The user requested a distinct visual identity and the same personal AI connection settings as the existing family application, with an independent Hermes profile and worker. The existing private deployment remains authorized.
+
+- [x] Apply denim-blue and apricot styling, bold sans-serif headings, clothing illustrations and a consistent hanger/shirt app icon.
+- [x] Verify the mobile, desktop, authentication and dialog screens and two-device production flows.
+- [ ] Publish and privately deploy the checked release.
+- [ ] Configure an independent personal Hermes profile/service, match production model settings and verify the live connection.
+
+The visual refresh passed TypeScript, all 28 frontend tests, the PWA build and the complete two-device production browser suite. Screenshots include first-owner setup, photo/tag review, listing review and the actual mobile viewport. The profile is prepared with separate settings; a fresh personal sign-in is required because cloned single-use OAuth grants cannot safely be shared.

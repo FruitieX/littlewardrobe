@@ -104,6 +104,15 @@ async function navigation(page, label) {
     .getByRole('navigation', { name: 'Main navigation' })
     .getByRole('button', { name: label, exact: true })
     .click()
+  await page.waitForFunction(
+    (label) =>
+      [...document.querySelectorAll('nav button')].some(
+        (button) =>
+          button.textContent.trim() === label &&
+          button.getAttribute('aria-current') === 'page',
+      ),
+    label,
+  )
 }
 async function finishSync(context) {
   await waitFor(
@@ -117,7 +126,17 @@ async function screenshot(page, name) {
   await page.waitForFunction(() =>
     [...document.images].every((i) => i.complete),
   )
-  await page.screenshot({ path: `mockups/${name}.png`, fullPage: true })
+  await page.evaluate(() => window.scrollTo(0, 0))
+  await page.screenshot({
+    path: `mockups/${name}.png`,
+    fullPage: true,
+    animations: 'disabled',
+  })
+  if (name === 'wardrobe-mobile')
+    await page.screenshot({
+      path: 'mockups/wardrobe-mobile-viewport.png',
+      animations: 'disabled',
+    })
 }
 try {
   if (!process.env.LITTLEWARDROBE_BROWSER_URL) {
@@ -169,6 +188,14 @@ try {
   })
   const stranger = await browser.newContext()
   assert.equal((await stranger.request.get(`${base}/api/state`)).status(), 401)
+  const signIn = await stranger.newPage()
+  await signIn.setViewportSize({ width: 390, height: 844 })
+  await signIn.goto(base)
+  await signIn
+    .getByRole('heading', { name: 'Set up Little Wardrobe' })
+    .waitFor()
+  await screenshot(signIn, 'setup-mobile')
+  await signIn.close()
   await call(owner, '/auth/setup', 'POST', {
     setupToken: token,
     email: 'owner@example.test',
