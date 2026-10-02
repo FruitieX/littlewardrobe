@@ -42,4 +42,88 @@ class Protocol(unittest.TestCase):
     def test_oversized_output_is_rejected(self):
         with self.assertRaises(ValueError):module.stream_text(['data: '+json.dumps({'type':'response.output_text.delta','delta':'x'*(1024*1024+1)})])
 
+
+class PersonalCredentials(unittest.TestCase):
+    def runtime(self, stores, expired=True):
+        import contextlib
+        import tempfile
+        import types
+        from unittest.mock import Mock, patch
+        stack=contextlib.ExitStack()
+        self.addCleanup(stack.close)
+        root=Path(stack.enter_context(tempfile.TemporaryDirectory()))
+        home=root/'profile';home.mkdir()
+        constants=types.ModuleType('hermes_constants')
+        constants.get_hermes_home=lambda:home
+        constants.get_default_hermes_root=lambda:root
+        auth=types.ModuleType('hermes_cli.auth')
+        auth._load_auth_store=Mock(side_effect=stores)
+        auth._save_auth_store=Mock()
+        held=[]
+        @contextlib.contextmanager
+        def lock():
+            held.append(True)
+            try:yield
+            finally:held.pop()
+        auth._auth_store_lock=lock
+        codex=types.ModuleType('hermes_cli.auth_codex')
+        codex._codex_access_token_is_expiring=Mock(side_effect=expired if isinstance(expired,list) else None,return_value=expired)
+        def renew(access,refresh):
+            self.assertTrue(held)
+            self.assertEqual((access,refresh),('owned-access','owned-refresh'))
+            return {'access_token':'renewed-access','refresh_token':'renewed-refresh'}
+        codex.refresh_codex_oauth_pure=Mock(side_effect=renew)
+        stack.enter_context(patch.dict('sys.modules',{'hermes_constants':constants,'hermes_cli.auth':auth,'hermes_cli.auth_codex':codex}))
+        return constants,auth,codex
+
+    def store(self,**changes):
+        entry={'label':'personal','source':'manual:device_code','access_token':'owned-access','refresh_token':'owned-refresh'}
+        entry.update(changes)
+        return {'credential_pool':{'openai-codex':[entry]},'unrelated':{'preserve':True}}
+
+    def test_refresh_owns_one_grant_under_lock(self):
+        first=self.store();locked=self.store()
+        _,auth,codex=self.runtime([first,locked])
+        self.assertEqual(module.personal.personal_credential(True)[0],'renewed-access')
+        codex.refresh_codex_oauth_pure.assert_called_once()
+        auth._save_auth_store.assert_called_once_with(locked)
+        self.assertTrue(locked['unrelated']['preserve'])
+        self.assertEqual(len(locked['credential_pool']['openai-codex']),1)
+
+    def test_fresh_credential_never_loads_general_pool(self):
+        _,auth,codex=self.runtime([self.store()],False)
+        self.assertEqual(module.personal.personal_credential(True)[0],'owned-access')
+        auth._save_auth_store.assert_not_called()
+        codex.refresh_codex_oauth_pure.assert_not_called()
+
+    def test_ambiguous_credentials_fail_without_refresh(self):
+        store=self.store();store['credential_pool']['openai-codex'].append({'source':'device_code'})
+        _,auth,codex=self.runtime([store])
+        with self.assertRaises(RuntimeError):module.personal.personal_credential(True)
+        auth._save_auth_store.assert_not_called()
+        codex.refresh_codex_oauth_pure.assert_not_called()
+
+    def test_root_profile_cannot_be_used(self):
+        constants,auth,codex=self.runtime([])
+        constants.get_hermes_home=constants.get_default_hermes_root
+        with self.assertRaises(RuntimeError):module.personal.personal_credential(True)
+        auth._load_auth_store.assert_not_called()
+        codex.refresh_codex_oauth_pure.assert_not_called()
+
+    def test_refresh_rechecks_concurrent_rotation(self):
+        _,auth,codex=self.runtime([self.store(),self.store(access_token='peer-access')],[True,False])
+        self.assertEqual(module.personal.personal_credential(True)[0],'peer-access')
+        codex.refresh_codex_oauth_pure.assert_not_called()
+        auth._save_auth_store.assert_not_called()
+
+    def test_external_route_rejected_before_refresh(self):
+        _,auth,codex=self.runtime([self.store(base_url='https://example.test/v1')])
+        with self.assertRaises(RuntimeError):module.personal.personal_credential(True)
+        codex.refresh_codex_oauth_pure.assert_not_called()
+
+    def test_expired_credential_requires_explicit_refresh(self):
+        _,auth,codex=self.runtime([self.store()])
+        with self.assertRaises(RuntimeError):module.personal.personal_credential(False)
+        codex.refresh_codex_oauth_pure.assert_not_called()
+
 if __name__=='__main__':unittest.main()

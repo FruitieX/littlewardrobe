@@ -1,37 +1,44 @@
 """Resolve only the locally owned personal Hermes credential, without fallback."""
-import contextlib
 import importlib.util
-import io
 from pathlib import Path
 from urllib.parse import urlsplit
 
-def personal_credential(refresh=False):
-    from hermes_constants import get_hermes_home, get_default_hermes_root
-    from hermes_cli.auth import _load_auth_store
-    from hermes_cli.auth_codex import _codex_access_token_is_expiring
-    home = get_hermes_home().resolve()
-    if home == get_default_hermes_root().resolve() or not home.is_dir():
-        raise RuntimeError('A dedicated personal profile is required')
-    entries = _load_auth_store().get('credential_pool', {}).get('openai-codex', [])
+def _owned_credential(store):
+    entries = store.get('credential_pool', {}).get('openai-codex', [])
     if len(entries) != 1 or entries[0].get('label') != 'personal' or entries[0].get('source') not in ('manual:device_code', 'manual:loopback_pkce'):
         raise RuntimeError('Profile must own exactly one Codex login labeled personal')
-    token = entries[0].get('access_token')
-    base = entries[0].get('base_url') or 'https://chatgpt.com/backend-api/codex'
+    entry = entries[0]
+    token = entry.get('access_token')
+    base = entry.get('base_url') or 'https://chatgpt.com/backend-api/codex'
     route = urlsplit(base)
     if route.scheme != 'https' or route.hostname != 'chatgpt.com' or route.port not in (None, 443) or route.username or route.password or route.query or route.fragment or route.path.rstrip('/') != '/backend-api/codex':
         raise RuntimeError('Personal login must use the native Codex route')
     if not isinstance(token, str) or not token:
         raise RuntimeError('Personal login missing')
-    if _codex_access_token_is_expiring(token, 90):
-        if not refresh:
-            raise RuntimeError('Refresh the personal Hermes login')
-        from argparse import Namespace
-        from hermes_cli.auth_commands import auth_refresh_command
-        # Validate local ownership before entering Hermes's refresh machinery.
-        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
-            auth_refresh_command(Namespace(provider='openai-codex', target='personal'))
-        return personal_credential(False)
-    return token, base
+    return entry, base
+
+def personal_credential(refresh=False):
+    from hermes_constants import get_hermes_home, get_default_hermes_root
+    from hermes_cli.auth import _auth_store_lock, _load_auth_store, _save_auth_store
+    from hermes_cli.auth_codex import _codex_access_token_is_expiring, refresh_codex_oauth_pure
+    home = get_hermes_home().resolve()
+    if home == get_default_hermes_root().resolve() or not home.is_dir():
+        raise RuntimeError('A dedicated personal profile is required')
+    entry, base = _owned_credential(_load_auth_store())
+    if not _codex_access_token_is_expiring(entry['access_token'], 90):
+        return entry['access_token'], base
+    if not refresh:
+        raise RuntimeError('Refresh the personal Hermes login')
+    # Refresh exactly the profile-owned grant. General CLI pool loading can import
+    # root/other-program credentials, so it must never run inside this worker.
+    with _auth_store_lock():
+        store = _load_auth_store()
+        entry, base = _owned_credential(store)
+        if _codex_access_token_is_expiring(entry['access_token'], 90):
+            renewed = refresh_codex_oauth_pure(entry['access_token'], entry.get('refresh_token'))
+            entry.update(renewed)
+            _save_auth_store(store)
+        return entry['access_token'], base
 
 def image_provider(refresh=False, model=None, background=None, size=None):
     import hermes_cli

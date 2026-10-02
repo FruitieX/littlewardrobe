@@ -105,6 +105,8 @@ The user requested a distinct visual identity and the same personal AI connectio
 - [x] Apply denim-blue and apricot styling, bold sans-serif headings, clothing illustrations and a consistent hanger/shirt app icon.
 - [x] Verify the mobile, desktop, authentication and dialog screens and two-device production flows.
 - [ ] Publish and privately deploy the checked release.
-- [ ] Configure an independent personal Hermes profile/service, match production model settings and verify the live connection.
+- [x] Configure an independent personal Hermes profile/service, match production model settings and verify the live connection.
 
 The visual refresh passed TypeScript, all 28 frontend tests, the PWA build and the complete two-device production browser suite. Screenshots include first-owner setup, photo/tag review, listing review and the actual mobile viewport. The profile is prepared with separate settings; a fresh personal sign-in is required because cloned single-use OAuth grants cannot safely be shared.
+
+The dedicated profile is signed in, paired to the existing household and active as a sandboxed user service. Production models/chat, real tag vision and private image generation passed. Both family workers passed independent native token refresh and production chat afterward. The refresh check exposed and repaired a shared helper incompatibility: general Hermes CLI pool loading imports an extra borrowed login, so workers now refresh only their owned grant under the local auth lock. Twelve offline companion tests cover ownership and concurrent renewal. The administrator activated the built Pear system generation; the enabled worker is now preserved through boot.
