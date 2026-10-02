@@ -1,6 +1,6 @@
 # Little Wardrobe
 
-A private, shared family wardrobe inspired by ForkBasket. Add a garment photo and optional tag photo, review AI-suggested details, then track rotation, storage, hand-me-downs and resale. The interface is in English and sale listings are in Finnish.
+A private, shared family wardrobe. Add a garment photo and optional tag photo, review AI-suggested details, then track rotation, storage, hand-me-downs and resale. The interface is in English and sale listings are in Finnish.
 
 Children, birthdays, clothing/shoe sizes and storage locations are configurable. Search by child, lifecycle, category, size, season and location. Preserve purchase history, condition, defects, private notes, sold/donated items and keepsakes. Numeric size comparisons suggest pieces worth checking without pretending to know their actual fit.
 
@@ -49,6 +49,6 @@ nix develop --command npm run test:production
 
 The production browser suite starts isolated backend/provider servers. It exercises two adult sessions, mobile family/storage setup, clothing/tag photos, AI review, reference-image edits, hand-me-downs, offline reload/reconnect, concurrent editor conflicts, sale approval/export/edits, actual sales, bundles, backups and responsive screens. Rust checks cover household isolation, photo provenance, stale writes, persistence, approvals, provider requests and inherited auth/sync behavior.
 
-TanStack Start/Router, React, TypeScript, Tailwind and Radix; Rust, Tokio, Axum, SQLite, SSE and ts-rs. The operational foundation comes from committed ForkBasket code. Its internal state schema retains unused kitchen records to reuse the tested auth, backup and offline engine; the clothing interface uses its own validated collections. [The plan](docs/PLAN.md) records requirements and progress.
+TanStack Start/Router, React, TypeScript, Tailwind and Radix; Rust, Tokio, Axum, SQLite, SSE and ts-rs. Authenticated households, private images, encrypted AI credentials, guarded concurrent edits and a persisted offline outbox protect family data. [The plan](docs/PLAN.md) records requirements and progress.
 
 DM Sans and Fraunces include their SIL Open Font License files. The legacy server icon reference comes from Twemoji, with its CC BY 4.0 notice in `backend/assets/LICENSE-GRAPHICS.txt`; that icon feature is not exposed in the clothing interface. App marks are repo-native SVGs.

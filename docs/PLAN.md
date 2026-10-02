@@ -1,13 +1,13 @@
 # Little Wardrobe product and implementation plan
 
-Build a working family application in `/home/rasse/clothes` to manage the children’s clothes from purchase through daily use, storage, hand-me-downs and resale. The user requested a complete application inspired by `~/forkbasket`, with AI assistance for photo intake and sale preparation. This document preserves the agreed scope, practical constraints, implementation decisions and progress so work can continue across sessions.
+Build a working family application in `/home/rasse/clothes` to manage the children’s clothes from purchase through daily use, storage, hand-me-downs and resale. The user requested a complete application with AI assistance for photo intake and sale preparation. This document preserves the agreed scope, practical constraints, implementation decisions and progress so work can continue across sessions.
 
 ## Agreed requirements
 
 - Build a working app, not only a product proposal.
 - Family-only, mobile-friendly web app, installable as a PWA.
 - English interface and Finnish sale listings.
-- Follow ForkBasket’s self-hosting architecture and configurable AI options, including an OpenAI-compatible endpoint and the personal Hermes companion.
+- Self-host with configurable AI connections, including an OpenAI-compatible endpoint and the personal Hermes companion.
 - Full scope: inventory, photo intake, configurable children, active rotation, storage, hand-me-downs, sale drafts, bundles and posting automation where feasible.
 - Prepare a private ingress so the application is accessible only through the family’s LAN or VPN. Do not add a public gateway. Deployment preparation is authorized; changing the live cluster requires an explicit deployment instruction.
 - Save this plan and make its completion the active goal, as requested by the user.
@@ -20,7 +20,7 @@ The primary flow is take or choose a clothing photo, optionally attach a separat
 
 AI suggests descriptive name, clothing category, visible brand, printed size and size system, color, material where readable, likely season and visible condition. Show field evidence and uncertainty. An unreadable size triggers a request for a tag photo or manual entry; do not infer size from garment proportions or child age. Condition from a photograph is provisional. Keep visible defects and allow the family to confirm wear, stains, pilling and repairs. Purchase price, purchase date and purchase source remain optional manual facts unless evidence is explicitly supplied. Do not invent provenance, authenticity, waterproof performance or home conditions.
 
-Support manual intake when AI is disconnected or unavailable. Errors must preserve the draft and uploaded images. Photo upload and AI calls require connectivity; saved inventory edits use ForkBasket’s persisted offline outbox. Initial support is JPEG, PNG and WebP, with clear limits; HEIC is a possible later enhancement rather than a promised first-release capability.
+Support manual intake when AI is disconnected or unavailable. Errors must preserve the draft and uploaded images. Photo upload and AI calls require connectivity; saved inventory edits use a persisted offline outbox. Initial support is JPEG, PNG and WebP, with clear limits; HEIC is a possible later enhancement rather than a promised first-release capability.
 
 ## Inventory and family model
 
@@ -46,19 +46,19 @@ Investigate current Tori and Vinted posting interfaces and automation terms. Imp
 
 ## Architecture and access
 
-Use TanStack Start/Router, React, TypeScript, accessible Radix dialogs and the ForkBasket visual conventions, adapted for a calm clothing inventory. Use Rust, Tokio, Axum, SQLite and generated TypeScript API types. Start from the committed ForkBasket foundation without changing that project or copying its live data, keys, credentials or uncommitted work.
+Use TanStack Start/Router, React, TypeScript and accessible Radix dialogs for a calm clothing inventory. Use Rust, Tokio, Axum, SQLite and generated TypeScript API types.
 
 Reuse authenticated household isolation, first-owner setup token, account recovery, expiring invitations, secure same-origin cookie sessions, encrypted AI credentials, private uploaded images, atomic operations, idempotency, guarded concurrent edits, SSE refresh and persisted offline changes. Keep API keys and companion credentials on the appropriate server/agent machine. Test clothing-specific input validation, household image ownership and malformed AI output. Do not assume that previously tested shopping behavior proves the clothing features work.
 
 Use a project-local locked Nix environment, npm and Cargo lockfiles. Package frontend and backend into a single unprivileged container with persistent data and health checks. Provide a private Gateway API HTTPRoute using the homelab’s private gateway, HTTPS for PWA/camera behavior, a single replica, suitable SQLite storage, and SOPS secret examples. Document installation, provider setup, invitation, backups, recovery and upgrade procedures. Do not deploy the live homelab during implementation without a deployment instruction.
 
-Commit and push completed, checked task changes as authorized by `/home/rasse/AGENTS.md`. A new private repository may be created if needed to fulfill that standing push instruction. Do not include unrelated ForkBasket changes.
+Commit and push completed, checked task changes as authorized by `/home/rasse/AGENTS.md`. A new private repository may be created if needed to fulfill that standing push instruction. Include only changes made for this application.
 
 ## Completion checklist
 
-- [x] Inspect ForkBasket and capture the user’s preferences and scope.
+- [x] Capture the user’s preferences, scope and implementation conventions.
 - [x] Save this plan and activate completion as the goal.
-- [x] Bootstrap the isolated application from committed ForkBasket infrastructure and verify tools in Nix.
+- [x] Bootstrap the isolated application and verify tools in Nix.
 - [x] Complete the English mobile interface for inventory, garment detail, photo intake, family, storage and sale desk.
 - [x] Validate persistent clothing records, family configuration, hand-me-down transitions, inventory filters and sold/donated history.
 - [x] Validate both adult accounts, independent-device synchronization, guarded concurrency, offline edits and household/photo isolation.
@@ -72,7 +72,7 @@ Commit and push completed, checked task changes as authorized by `/home/rasse/AG
 
 ## Progress
 
-The working application now includes the English mobile wardrobe, configurable children and storage, private photo/tag intake, evidence and uncertainty review, size checks, hand-me-downs, Finnish single-item and bundle drafts, approval, guarded exports, published links and actual sale history. The family starts empty. The shared/offline foundation was copied from committed ForkBasket source without changing ForkBasket or copying live data or credentials.
+The working application now includes the English mobile wardrobe, configurable children and storage, private photo/tag intake, evidence and uncertainty review, size checks, hand-me-downs, Finnish single-item and bundle drafts, approval, guarded exports, published links and actual sale history. The family starts empty. Household isolation and guarded, persisted offline edits protect shared family data.
 
 Production browser checks have passed with two adult accounts and independent devices. They cover disjoint edits, rejected same-field conflicts, private photos, unreadable size followed by a tag photo, reference-image editing, offline reload/reconnect, original-only Vinted export, approval resets, sale tracking, bundle preparation, JSON backup/restore and 320–1440px layouts. Actual screenshots are saved in `mockups/` and have been visually reviewed. Browser AI fixtures and illustrated garments are isolated test data.
 
@@ -93,3 +93,7 @@ The user explicitly authorized deploying the application to the homelab with a p
 - [x] Record the deployment result and first-owner instructions, then commit/push final documentation.
 
 Deployment result: homelab revision `273db55` reconciled successfully; Flux is Ready/Healthy with one ready replica, the exact published digest `sha256:1bc82975fe97a170ac5ee206a1caf25a01b9ea5f9df5828f785601f154dcca54` and a Bound retained NFS claim. The private HTTPRoute is Accepted/ResolvedRefs and DNS resolves to `192.168.11.99`. Trusted HTTPS and normal DNS readiness passed. Public gateway and WAN requests returned 404; anonymous private APIs/photos/SSE returned 401 and cross-origin writes returned 403. Mobile/desktop HTTPS setup and PWA checks passed without page errors or overflow. An initial consistent NFS database backup passed integrity and DELETE-journal checks. The family is empty and awaits first-owner setup; AI provider configuration remains external setup. First-login and operations instructions are in `~/homelab/apps/littlewardrobe/README.md`.
+
+## Product copy cleanup — 2026-10-02
+
+Removed references to the originating project from the README, deployment guide and plan so Little Wardrobe is described independently. A source and asset search confirmed the runtime application already uses its own branding. This change updates documentation only.

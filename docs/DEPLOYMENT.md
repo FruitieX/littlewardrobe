@@ -1,6 +1,6 @@
 # Private deployment and recovery
 
-Little Wardrobe is prepared for the family’s LAN/VPN using the same single-container Rust deployment as ForkBasket. Building the package or rendering templates does not deploy the live homelab. The application requires family accounts on the private network.
+Little Wardrobe runs as a single Rust container on the family’s LAN/VPN. Building the package or rendering templates does not deploy the live homelab. The application requires family accounts on the private network.
 
 ## Package and configuration
 
@@ -16,7 +16,7 @@ Persist `/data`; temporary files use `/tmp`. Set `LITTLEWARDROBE_ORIGIN=https://
 | `LITTLEWARDROBE_SECRET_KEY`          | Exactly 64 hexadecimal characters; encryption key for provider credentials                     |
 | `LITTLEWARDROBE_SQLITE_JOURNAL_MODE` | `WAL` for local/block storage, `DELETE` for an appropriately configured NFS volume             |
 
-Use unique setup and encryption secrets. Do not copy ForkBasket’s database or secrets. Preserve the encryption key to decrypt the saved AI credential. Changing it is not a credential rotation strategy.
+Use setup and encryption secrets unique to this installation. Preserve the encryption key to decrypt the saved AI credential. Changing it is not a credential rotation strategy.
 
 ## Kubernetes and private ingress
 
@@ -58,7 +58,7 @@ To recover the instance, stop it, restore into `/data/littlewardrobe.sqlite3`, p
 
 At the user's explicit request, the app is deployed at **https://littlewardrobe.fruitiex.org** through the private gateway only. DNS resolves to `192.168.11.99`; use the LAN/VPN. The public gateway and WAN returned 404 for this host. Homelab revision `273db55` deployed the successful CI `36922591167` release, source `c4cb95e`, pinned to digest `sha256:1bc82975fe97a170ac5ee206a1caf25a01b9ea5f9df5828f785601f154dcca54`.
 
-The live configuration is in `~/homelab/apps/littlewardrobe`, registered through the homelab Flux Kustomization. It uses existing `ghcr-credentials`, freshly SOPS-encrypted bootstrap/encryption secrets, and the retained 5 GiB `littlewardrobe-data-nfs` claim with `nfs-csi` and DELETE journaling. The NAS directory is `/volume3/homelab/littlewardrobe-data-nfs` on `nectarine.internal.fruitiex.org`. No account, database or AI credential was copied from ForkBasket. App CI publishes images but does not automatically deploy them; update the homelab's pinned digest for future rollouts.
+The live configuration is in `~/homelab/apps/littlewardrobe`, registered through the homelab Flux Kustomization. It uses existing `ghcr-credentials`, freshly SOPS-encrypted bootstrap/encryption secrets, and the retained 5 GiB `littlewardrobe-data-nfs` claim with `nfs-csi` and DELETE journaling. The NAS directory is `/volume3/homelab/littlewardrobe-data-nfs` on `nectarine.internal.fruitiex.org`. This deployment has independent accounts, a dedicated database and its own AI configuration. App CI publishes images but does not automatically deploy them; update the homelab's pinned digest for future rollouts.
 
 Verification passed: Flux Ready/Healthy, one ready replica using the expected digest, bound storage, private route Accepted/ResolvedRefs, trusted HTTPS, normal DNS readiness, anonymous API/photo/SSE denial, cross-origin write rejection, public/WAN exclusion, and mobile/desktop first-use setup plus PWA checks. A consistent initial backup at `/data/initial-deployment-2026-10-02.sqlite3` passed SQLite integrity checks and confirmed DELETE mode. No accounts or family inventory were created during verification.
 
