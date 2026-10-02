@@ -53,3 +53,21 @@ LITTLEWARDROBE_DATA_DIR=/data littlewardrobe-api --backup /backup/littlewardrobe
 Choose a new destination; existing files are refused. This uses SQLite’s backup API while the app runs. Copying only the main database file while WAL is active is not a consistent backup. Pass the same data directory and mounted path when invoking from a separate host.
 
 To recover the instance, stop it, restore into `/data/littlewardrobe.sqlite3`, preserve/restore the encryption key, correct UID/GID permissions, then start a compatible version. Confirm accounts, photos and AI connection. Back up before upgrading; migrations are automatic and a newer schema refuses downgrade.
+
+## Homelab rollout — 2026-10-02
+
+At the user's explicit request, the app is deployed at **https://littlewardrobe.fruitiex.org** through the private gateway only. DNS resolves to `192.168.11.99`; use the LAN/VPN. The public gateway and WAN returned 404 for this host. Homelab revision `273db55` deployed the successful CI `36922591167` release, source `c4cb95e`, pinned to digest `sha256:1bc82975fe97a170ac5ee206a1caf25a01b9ea5f9df5828f785601f154dcca54`.
+
+The live configuration is in `~/homelab/apps/littlewardrobe`, registered through the homelab Flux Kustomization. It uses existing `ghcr-credentials`, freshly SOPS-encrypted bootstrap/encryption secrets, and the retained 5 GiB `littlewardrobe-data-nfs` claim with `nfs-csi` and DELETE journaling. The NAS directory is `/volume3/homelab/littlewardrobe-data-nfs` on `nectarine.internal.fruitiex.org`. No account, database or AI credential was copied from ForkBasket. App CI publishes images but does not automatically deploy them; update the homelab's pinned digest for future rollouts.
+
+Verification passed: Flux Ready/Healthy, one ready replica using the expected digest, bound storage, private route Accepted/ResolvedRefs, trusted HTTPS, normal DNS readiness, anonymous API/photo/SSE denial, cross-origin write rejection, public/WAN exclusion, and mobile/desktop first-use setup plus PWA checks. A consistent initial backup at `/data/initial-deployment-2026-10-02.sqlite3` passed SQLite integrity checks and confirmed DELETE mode. No accounts or family inventory were created during verification.
+
+Retrieve the bootstrap token in your own private terminal, then create the first owner and save the recovery code:
+
+```sh
+cd ~/homelab
+nix-shell
+sops --decrypt --extract '["stringData"]["LITTLEWARDROBE_SETUP_TOKEN"]' apps/littlewardrobe/secret.sops.yaml
+```
+
+Invite the second adult through Settings and configure Family. Connect AI through Settings using the [AI setup guide](AI.md). Preserve the SOPS encryption secret with database backups.

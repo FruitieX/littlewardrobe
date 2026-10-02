@@ -80,4 +80,16 @@ Delivery checks passed: 60 Rust tests, Clippy for all targets with warnings deni
 
 The completed application is delivered in the private repository [FruitieX/littlewardrobe](https://github.com/FruitieX/littlewardrobe). The validation/publishing workflow builds and verifies the container before publishing to GHCR; it has no live deployment job. All accepted completion milestones are implemented and checked. External provider configuration, live deployment and any future business-only publisher are documented operational steps outside this delivery.
 
-Primary marketplace documentation establishes business-only integration routes, not an available personal-account publisher. The accepted fallback is implemented and documented in `docs/MARKETPLACES.md`. Provider credentials and a live personal companion remain external configuration. Private deployment and recovery instructions are in `docs/DEPLOYMENT.md`; templates do not alter the live cluster. No marketplace publication or live deployment has occurred.
+Primary marketplace documentation establishes business-only integration routes, not an available personal-account publisher. The accepted fallback is implemented and documented in `docs/MARKETPLACES.md`. Provider credentials and a live personal companion remain external configuration. Private deployment and recovery instructions are in `docs/DEPLOYMENT.md`; templates do not alter the live cluster. At the initial implementation delivery, no marketplace publication or live deployment had occurred. The later authorized homelab deployment is recorded below.
+
+## Private homelab deployment — 2026-10-02
+
+The user explicitly authorized deploying the application to the homelab with a private ingress. The target is `https://littlewardrobe.fruitiex.org`, attached only to the existing private Envoy gateway (`192.168.11.99`). Deployment uses the current homelab NFS CSI convention, a separate retained 5 GiB claim, SQLite DELETE journaling, fresh SOPS-encrypted bootstrap/encryption secrets, existing GHCR pull credentials and the immutable image from successful application CI `36922591167`.
+
+- [x] Inspect the current homelab, update the clean checkout and verify cluster/tool access.
+- [x] Prepare and validate private-only routing, retained storage, non-root deployment, SOPS round-trip and Kubernetes server schemas.
+- [x] Commit/push the homelab configuration and reconcile through Flux.
+- [x] Verify the running release, retained NFS data, trusted private HTTPS/PWA, anonymous access restrictions and public-gateway exclusion.
+- [x] Record the deployment result and first-owner instructions, then commit/push final documentation.
+
+Deployment result: homelab revision `273db55` reconciled successfully; Flux is Ready/Healthy with one ready replica, the exact published digest `sha256:1bc82975fe97a170ac5ee206a1caf25a01b9ea5f9df5828f785601f154dcca54` and a Bound retained NFS claim. The private HTTPRoute is Accepted/ResolvedRefs and DNS resolves to `192.168.11.99`. Trusted HTTPS and normal DNS readiness passed. Public gateway and WAN requests returned 404; anonymous private APIs/photos/SSE returned 401 and cross-origin writes returned 403. Mobile/desktop HTTPS setup and PWA checks passed without page errors or overflow. An initial consistent NFS database backup passed integrity and DELETE-journal checks. The family is empty and awaits first-owner setup; AI provider configuration remains external setup. First-login and operations instructions are in `~/homelab/apps/littlewardrobe/README.md`.
