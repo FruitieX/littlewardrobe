@@ -366,8 +366,16 @@ pub fn start(server: Server) -> Result<()> {
     resume_interrupted(&server)?;
     tokio::spawn(async move {
         loop {
-            if let Err(error) = run_one(&server).await {
-                tracing::error!("Item icon queue: {}", error.1);
+            let app = server.clone();
+            match tokio::spawn(async move { run_one(&app).await }).await {
+                Ok(Err(error)) => tracing::error!("Item icon queue: {}", error.1),
+                Err(error) => {
+                    tracing::error!("Item icon queue panicked: {error}");
+                    if let Ok(conn) = server.db.lock() {
+                        let _ = conn.execute("UPDATE item_icon_jobs SET status='failed',run_id=NULL,error='The icon task stopped unexpectedly. Try again.' WHERE status='running'", []);
+                    }
+                }
+                _ => {}
             }
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }

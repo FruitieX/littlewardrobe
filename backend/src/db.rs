@@ -59,7 +59,7 @@ impl Database {
             [],
             |row| row.get(0),
         )?;
-        if version > 6 {
+        if version > 7 {
             return Err(ApiError::internal(
                 "This database was created by a newer Little Wardrobe version. Restore a compatible backup before downgrading.",
             ));
@@ -94,6 +94,11 @@ impl Database {
             conn.execute_batch(include_str!("../migrations/006_clothing_photos.sql"))?;
             conn.execute_batch("COMMIT")?;
         }
+        if version < 7 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/007_photo_intake.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
         conn.execute(
             "DELETE FROM companion_jobs WHERE deadline < unixepoch()",
             [],
@@ -112,9 +117,18 @@ impl Database {
         Ok(Self(Arc::new(Mutex::new(conn))))
     }
     pub fn lock(&self) -> Result<MutexGuard<'_, Connection>> {
-        self.0
-            .lock()
-            .map_err(|_| ApiError::internal("database lock poisoned"))
+        match self.0.lock() {
+            Ok(guard) => Ok(guard),
+            Err(poisoned) => {
+                tracing::error!("Recovering the database connection after a panic");
+                let guard = poisoned.into_inner();
+                if !guard.is_autocommit() {
+                    guard.execute_batch("ROLLBACK")?;
+                }
+                self.0.clear_poison();
+                Ok(guard)
+            }
+        }
     }
     pub fn snapshot(conn: &Connection, household: &str) -> Result<Snapshot> {
         let (revision, data): (u32, String) = conn.query_row(

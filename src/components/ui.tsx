@@ -36,17 +36,19 @@ export function Modal({
       <Dialog.Portal>
         <Dialog.Overlay className="modal-overlay" />
         <Dialog.Content className={`modal-content ${className}`}>
-          <Dialog.Close
-            className="icon-button modal-close"
-            aria-label="Close dialog"
-          >
-            <X size={20} />
-          </Dialog.Close>
-          <Dialog.Title className="modal-title">{title}</Dialog.Title>
-          <Dialog.Description className="modal-description">
-            {description}
-          </Dialog.Description>
-          {children}
+          <div className="modal-header">
+            <Dialog.Close
+              className="icon-button modal-close"
+              aria-label="Close dialog"
+            >
+              <X size={20} />
+            </Dialog.Close>
+            <Dialog.Title className="modal-title">{title}</Dialog.Title>
+            <Dialog.Description className="modal-description">
+              {description}
+            </Dialog.Description>
+          </div>
+          <div className="modal-body">{children}</div>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

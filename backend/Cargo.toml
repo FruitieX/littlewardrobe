@@ -22,7 +22,7 @@ reqwest = { version = "0.12", default-features = false, features = ["json", "rus
 base64 = "0.22"
 image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
 async-stream = "0.3"
-tower-http = { version = "0.6", features = ["fs", "trace", "limit", "set-header"] }
+tower-http = { version = "0.6", features = ["fs", "trace", "limit", "set-header", "catch-panic"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 

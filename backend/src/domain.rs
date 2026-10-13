@@ -889,10 +889,21 @@ fn patch(state: &mut Value, change: &Change) -> Result<()> {
             let current = position
                 .map(|index| list[index].clone())
                 .unwrap_or(Value::Null);
-            if json_equal(&current, &change.after) {
+            // Older offline clothing edits predate AI review metadata. Apply
+            // serde defaults before comparison, without weakening edit guards.
+            let normalize = |value: &Value| -> Result<Value> {
+                if change.collection == "garments" && !value.is_null() {
+                    Ok(serde_json::to_value(serde_json::from_value::<
+                        crate::clothing::Garment,
+                    >(value.clone())?)?)
+                } else {
+                    Ok(value.clone())
+                }
+            };
+            if json_equal(&current, &normalize(&change.after)?) {
                 return Ok(());
             }
-            if !json_equal(&current, &change.before) {
+            if !json_equal(&current, &normalize(&change.before)?) {
                 return Err(ApiError::conflict());
             }
             if change.after.is_null() {

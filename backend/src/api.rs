@@ -232,6 +232,7 @@ pub async fn mutate(
         crate::clothing::invalidate_approvals(&before, &mut snapshot.state);
         crate::clothing::validate(&snapshot.state)?;
         crate::clothing::validate_images(&tx, &actor.household_id, &snapshot.state)?;
+        crate::photo_jobs::guard_changes(&tx, &actor.household_id, &snapshot.state)?;
         let changes = domain::changes(&before, &snapshot.state)?;
         let kind = serde_json::to_value(&input.operation)?["type"]
             .as_str()
@@ -694,7 +695,13 @@ pub async fn restore(
         if previous.revision != input.expected_revision {
             return Err(ApiError::conflict());
         }
-        for table in ["events", "uploads", "ai_proposals", "companion_jobs"] {
+        for table in [
+            "events",
+            "uploads",
+            "ai_proposals",
+            "companion_jobs",
+            "clothing_photo_jobs",
+        ] {
             tx.execute(
                 &format!("DELETE FROM {table} WHERE household_id=?1"),
                 [&actor.household_id],

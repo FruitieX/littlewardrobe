@@ -11,6 +11,7 @@ mod error;
 mod icon_jobs;
 mod insights;
 mod model;
+mod photo_jobs;
 #[cfg(test)]
 mod tests;
 
@@ -53,10 +54,10 @@ impl Server {
     }
     pub fn rate_limit(&self, key: &str, max: u32, window: i64) -> Result<()> {
         let now = chrono::Utc::now().timestamp();
-        let mut limits = self
-            .limits
-            .lock()
-            .map_err(|_| ApiError::internal("rate limiter lock poisoned"))?;
+        let mut limits = self.limits.lock().unwrap_or_else(|poisoned| {
+            self.limits.clear_poison();
+            poisoned.into_inner()
+        });
         if limits.len() > 10000 {
             limits.retain(|_, (_, until)| *until > now);
         }
@@ -123,6 +124,11 @@ pub fn app(server: Server) -> Router {
         .route("/api/ai/assistant", post(ai::assistant))
         .route("/api/sales/{id}/export", get(clothing::export_listing))
         .route("/api/ai/analyze", post(clothing::analyze))
+        .route(
+            "/api/ai/photo-jobs",
+            get(photo_jobs::status).post(photo_jobs::create),
+        )
+        .route("/api/ai/photo-jobs/{id}", post(photo_jobs::manage))
         .route("/api/ai/listing", post(clothing::draft_listing))
         .route("/api/ai/enhance", post(clothing::enhance))
         .route("/api/ai/image", post(ai::generate_image))
@@ -142,6 +148,9 @@ pub fn app(server: Server) -> Router {
         )
         .layer(DefaultBodyLimit::max(9 * 1024 * 1024))
         .layer(middleware::from_fn_with_state(server.clone(), protect))
+        .layer(tower_http::catch_panic::CatchPanicLayer::custom(
+            panic_response,
+        ))
         .with_state(server);
     if let Ok(directory) = std::env::var("LITTLEWARDROBE_STATIC_DIR") {
         router
@@ -158,6 +167,11 @@ pub fn app(server: Server) -> Router {
         router
     }
 }
+fn panic_response(_: Box<dyn std::any::Any + Send + 'static>) -> Response {
+    use axum::response::IntoResponse;
+    ApiError::internal("Request handler panicked").into_response()
+}
+
 async fn ready(
     axum::extract::State(server): axum::extract::State<Server>,
 ) -> Result<Json<serde_json::Value>> {
@@ -382,6 +396,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
     let listener = tokio::net::TcpListener::bind(&bind).await?;
     tracing::info!("Little Wardrobe API listening on {bind}");
     icon_jobs::start(server.clone()).map_err(|error| error.1)?;
+    photo_jobs::start(server.clone()).map_err(|error| error.1)?;
     axum::serve(listener, app(server))
         .with_graceful_shutdown(async {
             #[cfg(unix)]

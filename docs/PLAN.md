@@ -9,7 +9,7 @@ Build a working family application in `/home/rasse/littlewardrobe` to manage the
 - English interface and Finnish sale listings.
 - Self-host with configurable AI connections, including an OpenAI-compatible endpoint and the personal Hermes companion.
 - Full scope: inventory, photo intake, configurable children, active rotation, storage, hand-me-downs, sale drafts, bundles and posting automation where feasible.
-- Prepare a private ingress so the application is accessible only through the family’s LAN or VPN. Do not add a public gateway. Deployment preparation is authorized; changing the live cluster requires an explicit deployment instruction.
+- Prepare a private ingress so the application is accessible only through the family’s LAN or VPN. Do not add a public gateway. Checked updates to the existing private homelab instance are authorized; preserve the private ingress.
 - Save this plan and make its completion the active goal, as requested by the user.
 
 The working name is **Little Wardrobe**. It is an implementation default, not a user-approved brand or a claim of name availability. Real child names, birthdays, sizes and inventory start empty and are configured through the app.
@@ -50,7 +50,7 @@ Use TanStack Start/Router, React, TypeScript and accessible Radix dialogs for a 
 
 Reuse authenticated household isolation, first-owner setup token, account recovery, expiring invitations, secure same-origin cookie sessions, encrypted AI credentials, private uploaded images, atomic operations, idempotency, guarded concurrent edits, SSE refresh and persisted offline changes. Keep API keys and companion credentials on the appropriate server/agent machine. Test clothing-specific input validation, household image ownership and malformed AI output. Do not assume that previously tested shopping behavior proves the clothing features work.
 
-Use a project-local locked Nix environment, npm and Cargo lockfiles. Package frontend and backend into a single unprivileged container with persistent data and health checks. Provide a private Gateway API HTTPRoute using the homelab’s private gateway, HTTPS for PWA/camera behavior, a single replica, suitable SQLite storage, and SOPS secret examples. Document installation, provider setup, invitation, backups, recovery and upgrade procedures. Do not deploy the live homelab during implementation without a deployment instruction.
+Use a project-local locked Nix environment, npm and Cargo lockfiles. Package frontend and backend into a single unprivileged container with persistent data and health checks. Provide a private Gateway API HTTPRoute using the homelab’s private gateway, HTTPS for PWA/camera behavior, a single replica, suitable SQLite storage, and SOPS secret examples. Document installation, provider setup, invitation, backups, recovery and upgrade procedures. Checked updates to the existing private homelab instance are authorized as of 2026-10-13.
 
 Commit and push completed, checked task changes as authorized by `/home/rasse/AGENTS.md`. A new private repository may be created if needed to fulfill that standing push instruction. Include only changes made for this application.
 
@@ -121,3 +121,19 @@ Visual rollout completed through homelab revision `9fdc66e`, using application s
 - [x] Verify the actual photos produce valid choices with the repaired schema, and test malformed season output, draft preservation and retry in the production browser suite.
 
 The original prompt told the model to leave unknown text empty, and the schema accepted arbitrary strings even for enumerated fields. A repeat using the existing catalog photos returned an empty season, reproducing the generic clothing/child/location/date validation error. The repaired request returned season `all` with valid category, size system and condition. These diagnostic calls made no catalog changes and retained the existing personal credentials. No live deployment was performed for this repair.
+
+## Little Cupboard ports and private updates — 2026-10-13
+
+The user authorized deploying the photo-suggestion repair, removed the repeated deployment approval requirement, and requested the useful Little Cupboard ports. Checked updates to the existing private instance are now authorized; LAN/VPN-only routing remains required.
+
+- [ ] Deploy and verify the checked photo-suggestion repair.
+- [x] Add durable background clothing-photo intake, persistent AI-review markers, safe retry/cancel, and preservation of original photos.
+- [x] Port separate camera/gallery controls, fixed dialog headers and accent-insensitive multiword search.
+- [x] Port SQLite/rate-limit panic recovery and isolate background-worker failures.
+- [ ] Test two-device production browser behavior, sleeping/reopened pages, failures, cancellation and review; publish and privately deploy the checked ports.
+
+Background intake adds a visible pending clothing entry immediately, finishes supported descriptive fields on the server, and leaves an AI review marker until an adult reviews and saves it. It never assigns a child/location, infers an unreadable size, overwrites concurrent manual edits or approves a sale listing. Original private photographs are retained. Shopping-specific pantry, geolocation and generated-icon features are outside this port.
+
+Implementation validation: the background queue stores original-photo entries and task acceptance atomically, deduplicates retried requests, resumes interrupted work, records shared history/revisions and uses SSE refresh. It merges only unchanged descriptive fields and guards review, cancellation, deletion, photo replacement and JSON restore. Unreviewed clothing cannot approve a sale. New review metadata is defaulted when comparing older whole-record offline edits. Fixed headers, split photo controls and multiword accent-insensitive clothing search have been visually reviewed in real mobile/desktop screenshots. The expanded two-device production suite passes background intake with a held provider across reload, concurrent manual edits, retry, cancellation and adult review. Existing offline/isolation/original-photo/export checks still pass.
+
+Release checks passed locally: 65 Rust tests, Clippy with warnings denied, Rust formatting, TypeScript, 29 frontend tests, 12 Python companion checks, Prettier and the frontend/PWA build. The complete production browser suite passed and the updated intake, listing and wardrobe screenshots were inspected. Publishing and live rollout remain pending below.

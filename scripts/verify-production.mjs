@@ -14,6 +14,8 @@ const errors = []
 const calls = []
 let editedImage = ''
 let invalidExtraction = false
+let holdPhotoRequests = false
+const heldPhotoRequests = []
 const provider = createServer(async (req, res) => {
   let raw = ''
   for await (const chunk of req) raw += chunk
@@ -27,6 +29,8 @@ const provider = createServer(async (req, res) => {
     result = { data: [{ id: 'fixture-vision' }] }
   else {
     const prompt = body.messages?.[0]?.content ?? ''
+    if (holdPhotoRequests && prompt.includes('cataloguing ONE'))
+      await new Promise((resolve) => heldPhotoRequests.push(resolve))
     const tag =
       body.messages?.[1]?.content?.[0]?.text?.includes('\"tag\"') ?? false
     const content = prompt.includes('cataloguing ONE')
@@ -322,7 +326,7 @@ try {
   await mobile.getByRole('button', { name: 'Add clothes', exact: true }).click()
   let dialog = mobile.getByRole('dialog')
   await dialog
-    .getByLabel('Upload clothing photo')
+    .getByLabel('Upload clothing photo', { exact: true })
     .setInputFiles({ name: 'shirt.png', mimeType: 'image/png', buffer: photo })
   await dialog.locator('.photo-thumb').first().waitFor()
   await dialog
@@ -347,7 +351,7 @@ try {
   await dialog.getByText('Size wasn’t readable.', { exact: false }).waitFor()
   assert.equal(await dialog.getByLabel('Size on tag').inputValue(), '')
   await dialog
-    .getByLabel('Upload tag photo')
+    .getByLabel('Upload tag photo', { exact: true })
     .setInputFiles({ name: 'tag.png', mimeType: 'image/png', buffer: tagPhoto })
   await waitFor(
     async () => (await dialog.locator('.photo-thumb').count()) === 2,
@@ -683,6 +687,178 @@ try {
     'bundle saved',
   )
   await screenshot(page, 'sales-desktop')
+  // Durable photo intake continues after page reload; a second device edits
+  // the pending entry while the provider is deliberately held.
+  await navigation(mobile, 'Wardrobe')
+  await navigation(page, 'Wardrobe')
+  const intake = mobile.getByRole('region', { name: 'Add clothes from photos' })
+  await intake.getByRole('button', { name: 'Add from photo options' }).click()
+  await intake.getByRole('button', { name: 'Choose from gallery' }).waitFor()
+  assert.equal(
+    await intake
+      .getByLabel('Add from photo from gallery', { exact: true })
+      .getAttribute('capture'),
+    null,
+  )
+  holdPhotoRequests = true
+  await intake
+    .getByLabel('Add from photo from gallery', { exact: true })
+    .setInputFiles({
+      name: 'background-shirt.png',
+      mimeType: 'image/png',
+      buffer: photo,
+    })
+  await waitFor(
+    async () => heldPhotoRequests.length === 1,
+    'background provider started',
+  )
+  let pendingPhoto = (await call(owner, '/state')).state.garments.find(
+    (g) => g.name === 'Photo awaiting details',
+  )
+  assert.ok(pendingPhoto?.aiReview)
+  const queuedJob = (await call(owner, '/ai/photo-jobs')).find(
+    (job) => job.garmentId === pendingPhoto.id,
+  )
+  // Repeating the same acceptance after a lost response never adds a duplicate.
+  await call(wife, '/ai/photo-jobs', 'POST', {
+    id: queuedJob.id,
+    photos: pendingPhoto.photos,
+  })
+  await mobile.reload()
+  await mobile.locator('[data-app-ready="true"]').first().waitFor()
+  await mobile
+    .locator('.garment-card')
+    .filter({ hasText: 'Photo awaiting details' })
+    .waitFor()
+  await patch(owner, 'garments', pendingPhoto.id, pendingPhoto, {
+    ...pendingPhoto,
+    brand: 'Manual brand',
+  })
+  holdPhotoRequests = false
+  heldPhotoRequests.shift()()
+  await waitFor(async () => {
+    const garment = (await call(owner, '/state')).state.garments.find(
+      (g) => g.id === pendingPhoto.id,
+    )
+    return (
+      garment?.name === 'Striped cotton shirt' &&
+      garment.brand === 'Manual brand'
+    )
+  }, 'background AI merges without overwriting manual brand')
+  for (const device of [page, mobile]) {
+    await device
+      .getByRole('button', { name: /Manual brand Striped cotton shirt/ })
+      .waitFor()
+  }
+  await mobile
+    .getByRole('button', { name: /Manual brand Striped cotton shirt/ })
+    .click()
+  let backgroundDialog = mobile.getByRole('dialog')
+  await backgroundDialog
+    .getByText('AI draft · check the details', { exact: false })
+    .waitFor()
+  assert.equal(
+    await backgroundDialog.getByLabel('Size on tag').inputValue(),
+    '',
+  )
+  await screenshot(mobile, 'background-photo-review-mobile')
+  // Header and close control remain in the viewport at the bottom of the form.
+  await backgroundDialog.locator('.modal-body').evaluate((body) => {
+    body.scrollTop = body.scrollHeight
+  })
+  const headerBox = await backgroundDialog
+    .locator('.modal-header')
+    .boundingBox()
+  const closeBox = await backgroundDialog
+    .getByRole('button', { name: 'Close dialog' })
+    .boundingBox()
+  assert.ok(
+    headerBox &&
+      closeBox &&
+      closeBox.y >= headerBox.y &&
+      closeBox.y < headerBox.y + headerBox.height,
+  )
+  await backgroundDialog
+    .getByRole('button', { name: 'Save changes', exact: true })
+    .click()
+  await waitFor(
+    async () =>
+      !(await call(owner, '/state')).state.garments.find(
+        (g) => g.id === pendingPhoto.id,
+      ).aiReview,
+    'adult reviewed background draft',
+  )
+
+  invalidExtraction = true
+  await intake.getByLabel('Add from photo', { exact: true }).setInputFiles({
+    name: 'failed-shirt.png',
+    mimeType: 'image/png',
+    buffer: photo,
+  })
+  await waitFor(
+    async () =>
+      (await call(owner, '/ai/photo-jobs')).some(
+        (job) => job.status === 'failed',
+      ),
+    'failed background task is durable',
+  )
+  await mobile.reload()
+  await mobile.locator('[data-app-ready="true"]').first().waitFor()
+  await mobile.getByText('Photo details failed', { exact: true }).waitFor()
+  invalidExtraction = false
+  await mobile.getByRole('button', { name: 'Retry AI', exact: true }).click()
+  await waitFor(
+    async () =>
+      !(await call(owner, '/ai/photo-jobs')).some(
+        (job) =>
+          job.status === 'failed' ||
+          job.status === 'running' ||
+          job.status === 'queued',
+      ),
+    'background retry succeeded',
+  )
+  let retryPhoto = (await call(owner, '/state')).state.garments.find(
+    (g) => g.aiReview,
+  )
+  assert.equal(retryPhoto.photos[0].kind, 'front')
+
+  holdPhotoRequests = true
+  await intake.getByLabel('Add from photo', { exact: true }).setInputFiles({
+    name: 'cancel-shirt.png',
+    mimeType: 'image/png',
+    buffer: photo,
+  })
+  await waitFor(
+    async () => heldPhotoRequests.length === 1,
+    'cancelable background task started',
+  )
+  const canceledPhoto = (await call(owner, '/state')).state.garments.find(
+    (g) => g.name === 'Photo awaiting details',
+  )
+  await mobile.getByRole('button', { name: 'Cancel AI', exact: true }).click()
+  holdPhotoRequests = false
+  heldPhotoRequests.shift()()
+  await waitFor(
+    async () =>
+      !(await call(owner, '/ai/photo-jobs')).some(
+        (job) => job.garmentId === canceledPhoto.id,
+      ),
+    'background cancel persisted',
+  )
+  await pause(250)
+  assert.equal(
+    (await call(owner, '/state')).state.garments.find(
+      (g) => g.id === canceledPhoto.id,
+    ).name,
+    'Photo awaiting details',
+  )
+  // Remove only these isolated fixtures so the existing backup assertions stay exact.
+  for (const id of [pendingPhoto.id, retryPhoto.id, canceledPhoto.id]) {
+    const current = (await call(owner, '/state')).state.garments.find(
+      (g) => g.id === id,
+    )
+    await patch(owner, 'garments', id, current, null)
+  }
   const backupResponse = await owner.request.get(`${base}/api/backup`)
   assert.equal(backupResponse.status(), 200)
   const backup = await backupResponse.json()
@@ -728,7 +904,7 @@ try {
     'These are real production browser screenshots using an isolated test household, deterministic illustrated clothing fixtures and a controlled AI provider. The running app starts empty. Regenerate with `nix develop --command npm run test:production`.\n',
   )
   console.log(
-    'Production browser checks passed: two accounts, private photos, configurable children/storage, tag intake, reviewed AI, image references, hand-me-downs, offline reload/reconnect, sale approvals/export/price changes, sale history, bundles, backup/restore and 320–1440px layouts.',
+    'Production browser checks passed: two accounts, private photos, configurable children/storage, tag intake, durable background photo intake/retry/cancel/review, fixed dialog headers, reviewed AI, image references, hand-me-downs, offline reload/reconnect, sale approvals/export/price changes, sale history, bundles, backup/restore and 320–1440px layouts.',
   )
 } catch (error) {
   await mkdir('test-results', { recursive: true })
@@ -743,6 +919,7 @@ try {
           .catch(() => {})
   throw error
 } finally {
+  for (const release of heldPhotoRequests) release()
   await browser?.close()
   backend?.kill('SIGTERM')
   await new Promise((r) => provider.close(r))

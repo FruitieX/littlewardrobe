@@ -52,7 +52,7 @@ LITTLEWARDROBE_DATA_DIR=/data littlewardrobe-api --backup /backup/littlewardrobe
 
 Choose a new destination; existing files are refused. This uses SQLite’s backup API while the app runs. Copying only the main database file while WAL is active is not a consistent backup. Pass the same data directory and mounted path when invoking from a separate host.
 
-To recover the instance, stop it, restore into `/data/littlewardrobe.sqlite3`, preserve/restore the encryption key, correct UID/GID permissions, then start a compatible version. Confirm accounts, photos and AI connection. Back up before upgrading; migrations are automatic and a newer schema refuses downgrade.
+To recover the instance, stop it, restore into `/data/littlewardrobe.sqlite3`, preserve/restore the encryption key, correct UID/GID permissions, then start a compatible version. Confirm accounts, photos and AI connection. Back up before upgrading; migrations are automatic and a newer schema refuses downgrade. Schema 7 adds the durable clothing-photo queue and AI review metadata. Pending tasks resume after restart; restoring a household JSON backup cancels tasks while preserving its clothing drafts and original photos.
 
 ## Homelab rollout — 2026-10-02
 

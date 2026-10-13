@@ -1,6 +1,6 @@
 # Configure photo and listing assistance
 
-The app supports manual details and sale drafts until a provider is enabled. AI proposes changes for review; it does not save inventory or publish listings.
+The app supports manual details and sale drafts until a provider is enabled. AI proposes details for review and never publishes listings. Explicit background photo intake saves a marked clothing draft that an adult must review.
 
 ## Compatible API
 
@@ -9,6 +9,16 @@ In Settings, choose API transport and set a provider base URL, API key and visio
 The provider must accept images to identify clothing/tag details. Text-only models can draft sale listings. Model catalog and connection tests use the configured provider. Connectivity does not establish accuracy on your clothes: check suggestions against the real garment and tag, especially brand, size and wear.
 
 For background edits, choose an image model supporting `/images/edits` with inline reference images and a base64 result. Providers differ; unsupported editing reports an error and retains originals. The preservation prompt cannot guarantee unchanged garment details. Compare manually. Enhanced attachments are tracked on the server and excluded from Vinted exports.
+
+## Add from photo in the background
+
+Use **Add from photo** in the wardrobe to take one clothing photo. Its arrow also offers **Choose from gallery**. Once the upload and queue request finish, the original photo is saved as a private clothing entry and you can put the phone away. Reading continues on the server through closed/reloaded pages and server restarts. The existing vision model, reasoning and personal/API connection are reused.
+
+Pending tasks show **Reading photo…** with **Cancel AI**. Failed tasks keep the original photo and expose **Retry AI**, **Dismiss**, and the item editor for manual entry. Cancellation prevents any late result from attaching; an already-started provider call may still complete. Interrupted calls may repeat after a server restart. Repeating an accepted queue request does not create another item.
+
+Completed entries show **AI · needs review**. Open one to inspect evidence and uncertain fields, add a readable tag photo if needed, choose the child/location and save. Saving records your review and cancels unfinished work. An AI result only fills descriptive fields that have not changed since it was queued. It never selects a child/location, infers an unreadable size or overwrites manual changes. Deletion, replaced photos, review or cancellation prevent late results from reviving an item. Sale approval remains blocked until the clothing has been reviewed and its size/condition confirmed. Vinted exports keep using original photos.
+
+Up to 30 unfinished photo tasks may be queued per household. Intake and retry are limited to 60 requests per hour per running server; photo requests run one at a time. Household JSON restore preserves the entries/photos and review markers but cancels outstanding tasks. Full SQLite backups also retain the durable queue. Schema 7 requires a pre-upgrade backup for downgrade recovery.
 
 ## Personal Hermes companion
 

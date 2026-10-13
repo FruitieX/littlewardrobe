@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Shirt,
   Plus,
@@ -26,6 +26,9 @@ import {
 import { useApp } from '../lib/state'
 import { api, post, uploadImage } from '../lib/http'
 import { Modal, SectionTitle } from './ui'
+import { PhotoIntake } from './PhotoIntake'
+import { PhotoButton } from './PhotoButton'
+import { matchesSearch } from '../lib/search'
 import { WardrobeMark, WardrobeRail } from './WardrobeIdentity'
 import { ConnectionStatus } from './ConnectionStatus'
 import { AccountSettings } from './AccountSettings'
@@ -104,10 +107,19 @@ export function Wardrobe() {
           (!size || g.size.toLowerCase().includes(size.toLowerCase())) &&
           (season === 'all' || g.season === season || g.season === 'all') &&
           (location === 'all' || g.locationId === location) &&
-          [g.name, g.brand, g.size, g.color, g.notes]
-            .join(' ')
-            .toLowerCase()
-            .includes(query.toLowerCase()),
+          matchesSearch(
+            [
+              g.name,
+              g.brand,
+              g.size,
+              g.color,
+              g.notes,
+              g.material,
+              g.defects,
+              categories[g.category as keyof typeof categories],
+            ],
+            query,
+          ),
       ),
     [garments, child, filter, category, size, season, location, query],
   )
@@ -269,6 +281,12 @@ export function Wardrobe() {
                   ))}
                 </div>
               </div>
+              <PhotoIntake
+                onOpen={(id) => {
+                  const garment = garments.find((g) => g.id === id)
+                  if (garment) setEditing(garment)
+                }}
+              />
               <div className="inventory-tools">
                 <label className="search-field">
                   <Search size={18} />
@@ -390,6 +408,9 @@ export function Wardrobe() {
                             categories[g.category as keyof typeof categories]}
                         </div>
                         <h3>{g.name}</h3>
+                        {g.aiReview && (
+                          <Pill tone="peach">AI · needs review</Pill>
+                        )}
                         <div className="garment-card-meta">
                           <Pill
                             tone={
@@ -550,12 +571,36 @@ function GarmentEditor({
   const [g, setG] = useState(initial),
     [busy, setBusy] = useState(''),
     [error, setError] = useState(''),
-    [evidence, setEvidence] = useState<Record<string, string>>({}),
-    [uncertain, setUncertain] = useState<string[]>([]),
-    [needsTag, setNeedsTag] = useState(false)
+    [evidence, setEvidence] = useState<Record<string, string | undefined>>(
+      initial.aiEvidence ?? {},
+    ),
+    [uncertain, setUncertain] = useState<string[]>(
+      initial.aiUncertainFields ?? [],
+    ),
+    [needsTag, setNeedsTag] = useState(initial.aiNeedsTagPhoto ?? false)
   const children = state.children ?? [],
     locations = state.locations ?? [],
     exists = (state.garments ?? []).some((v) => v.id === g.id)
+  const baseline = useRef(initial)
+  const draft = useRef(g)
+  draft.current = g
+  useEffect(() => {
+    const latest = state.garments?.find((value) => value.id === initial.id)
+    if (!latest) return
+    const next = { ...draft.current },
+      previous = { ...baseline.current }
+    for (const key of Object.keys(latest) as (keyof Garment)[]) {
+      if (JSON.stringify(next[key]) === JSON.stringify(previous[key])) {
+        Object.assign(next, { [key]: latest[key] })
+        Object.assign(previous, { [key]: latest[key] })
+      }
+    }
+    baseline.current = previous
+    setG(next)
+    setEvidence(next.aiEvidence ?? {})
+    setUncertain(next.aiUncertainFields ?? [])
+    setNeedsTag(next.aiNeedsTagPhoto ?? false)
+  }, [state.garments, initial.id])
   const set = <K extends keyof Garment>(key: K, value: Garment[K]) =>
     setG((prev) => ({ ...prev, [key]: value }))
   async function run(label: string, fn: () => Promise<void>) {
@@ -573,7 +618,10 @@ function GarmentEditor({
     action({
       type: 'patch',
       label: exists ? 'Updated clothing' : 'Added clothing',
-      changes: recordChanges('garments', exists ? initial : null, g),
+      changes: recordChanges('garments', exists ? baseline.current : null, {
+        ...g,
+        aiReview: false,
+      }),
     })
     onClose()
   }
@@ -657,35 +705,24 @@ function GarmentEditor({
           </div>
           <div className="photo-actions">
             {(['front', 'tag'] as const).map((kind) => (
-              <label className="secondary-button" key={kind}>
-                <Camera size={17} />
-                {kind === 'tag' ? 'Add tag photo' : 'Add clothing photo'}
-                <input
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  capture="environment"
-                  aria-label={
-                    kind === 'tag'
-                      ? 'Upload tag photo'
-                      : 'Upload clothing photo'
-                  }
-                  disabled={
-                    !!busy || status === 'offline' || g.photos.length >= 12
-                  }
-                  onChange={(e) => {
-                    const file = e.target.files?.[0]
-                    if (file)
-                      void run('Uploading photo', async () => {
-                        const url = await uploadImage(file)
-                        setG((v) => ({
-                          ...v,
-                          photos: [...v.photos, { url, kind }],
-                        }))
-                      })
-                    e.target.value = ''
-                  }}
-                />
-              </label>
+              <PhotoButton
+                key={kind}
+                label={
+                  kind === 'tag' ? 'Upload tag photo' : 'Upload clothing photo'
+                }
+                disabled={
+                  !!busy || status === 'offline' || g.photos.length >= 12
+                }
+                onFile={(file) =>
+                  void run('Uploading photo', async () => {
+                    const url = await uploadImage(file)
+                    setG((value) => ({
+                      ...value,
+                      photos: [...value.photos, { url, kind }],
+                    }))
+                  })
+                }
+              />
             ))}
           </div>
           <small>
@@ -729,6 +766,13 @@ function GarmentEditor({
                     ].map((key) => [key, result.garment[key as keyof Garment]]),
                   ),
                 }))
+                setG((v) => ({
+                  ...v,
+                  aiReview: true,
+                  aiEvidence: result.evidence,
+                  aiUncertainFields: result.uncertainFields,
+                  aiNeedsTagPhoto: result.needsTagPhoto,
+                }))
                 setEvidence(result.evidence)
                 setUncertain(result.uncertainFields)
                 setNeedsTag(result.needsTagPhoto)
@@ -742,6 +786,12 @@ function GarmentEditor({
             <Sparkles size={16} />
             Connect AI in Settings to suggest details from photos. You can add
             everything manually.
+          </p>
+        )}
+        {g.aiReview && (
+          <p className="review-note">
+            AI draft · check the details and assign a child and location before
+            saving.
           </p>
         )}
         {needsTag && (

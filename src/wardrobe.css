@@ -1746,6 +1746,133 @@ body,
 .modal-description {
   color: #63718a;
 }
+
+/* Keep the title and close control visible while clothing forms scroll. */
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 !important;
+}
+.modal-header {
+  flex: none;
+  padding: 24px 25px 0;
+  background: inherit;
+}
+.modal-header .modal-description {
+  margin-bottom: 16px;
+}
+.modal-body {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 25px 24px;
+}
+.modal-body .editor-footer {
+  position: sticky;
+  bottom: -24px;
+  background: #fffefa;
+  padding: 14px 0 24px;
+  margin-bottom: -24px;
+}
+.photo-split {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+}
+.photo-split > .secondary-button:first-child {
+  border-radius: 9px 0 0 9px;
+}
+.photo-split .photo-more {
+  border-radius: 0 9px 9px 0;
+  padding: 10px;
+  border-left: 0;
+}
+.photo-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 5;
+  display: grid;
+  gap: 4px;
+  min-width: 175px;
+  padding: 6px;
+  border: 1px solid #cdd8e9;
+  border-radius: 9px;
+  background: white;
+  box-shadow: 0 8px 25px #23324d25;
+}
+.photo-menu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 9px;
+  border: 0;
+  border-radius: 5px;
+  background: #f4f7fc;
+  font-size: 12px;
+}
+.background-intake {
+  margin: 12px 0 20px;
+}
+.background-intake-start {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.background-intake small {
+  font-size: 11px;
+  color: #63718a;
+  line-height: 1.6;
+}
+.photo-job {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  margin-top: 8px;
+  background: #edf2fa;
+  border-radius: 9px;
+}
+.photo-job > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.photo-job > button {
+  border: 0;
+  background: white;
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-size: 11px;
+}
+.photo-job > small {
+  flex-basis: 100%;
+}
+.garment-card-body > .wardrobe-pill {
+  margin-bottom: 8px;
+}
+@media (max-width: 600px) {
+  .modal-header {
+    padding: 20px 17px 0;
+  }
+  .modal-body {
+    padding: 0 17px 20px;
+  }
+  .modal-body .editor-footer {
+    bottom: -20px;
+    padding-bottom: 20px;
+    margin-bottom: -20px;
+  }
+  .background-intake-start {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+}
 .auth-page {
   background:
     radial-gradient(#b7c9e445 1px, transparent 1px) 0 0 / 16px 16px,

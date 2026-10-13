@@ -2112,3 +2112,93 @@ async fn households_cannot_read_each_others_state_history_or_private_images() {
         StatusCode::NOT_FOUND
     );
 }
+
+#[tokio::test]
+async fn a_panic_holding_the_database_lock_does_not_break_later_requests() {
+    let (server, _dir) = server();
+    let owner = owner(&server).await;
+    let db = server.db.clone();
+    let panicked = std::thread::spawn(move || {
+        let conn = db.lock().unwrap();
+        conn.execute_batch("BEGIN IMMEDIATE; UPDATE households SET revision=revision+1000;")
+            .unwrap();
+        panic!("simulated handler bug");
+    })
+    .join();
+    assert!(panicked.is_err());
+    assert!(server.db.0.is_poisoned());
+    {
+        let conn = server
+            .db
+            .lock()
+            .expect("a poisoned connection is recovered");
+        assert!(
+            conn.is_autocommit(),
+            "the unfinished transaction was rolled back"
+        );
+        let revision: i64 = conn
+            .query_row("SELECT MAX(revision) FROM households", [], |row| row.get(0))
+            .unwrap();
+        assert!(revision < 1000);
+    }
+    assert!(!server.db.0.is_poisoned());
+    let (status, _, _) = request(
+        &server,
+        Method::GET,
+        "/api/state",
+        Value::Null,
+        Some(&owner),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    operation(
+        &server,
+        &owner,
+        json!({"type":"addItem","productId":"milk","quantity":1.0,"unit":"L","note":"","accumulate":false}),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn handler_panics_return_json_and_rate_limits_recover() {
+    let router = Router::new()
+        .route(
+            "/panic",
+            get(|| async {
+                panic!("simulated handler bug");
+                #[allow(unreachable_code)]
+                ""
+            }),
+        )
+        .layer(tower_http::catch_panic::CatchPanicLayer::custom(
+            super::panic_response,
+        ));
+    let response = router
+        .oneshot(
+            Request::builder()
+                .uri("/panic")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let body: Value =
+        serde_json::from_slice(&response.into_body().collect().await.unwrap().to_bytes()).unwrap();
+    assert_eq!(
+        body["message"],
+        "The operation could not be completed. Please try again."
+    );
+    let (server, _dir) = server();
+    let limits = server.limits.clone();
+    assert!(
+        std::thread::spawn(move || {
+            let _guard = limits.lock().unwrap();
+            panic!("simulated limiter bug");
+        })
+        .join()
+        .is_err()
+    );
+    server.rate_limit("after-panic", 2, 60).unwrap();
+    assert!(!server.limits.is_poisoned());
+}

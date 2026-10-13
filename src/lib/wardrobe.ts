@@ -85,6 +85,10 @@ export const blankGarment = (): Garment => ({
   notes: '',
   photos: [],
   createdAt: new Date().toISOString(),
+  aiReview: false,
+  aiEvidence: {},
+  aiUncertainFields: [],
+  aiNeedsTagPhoto: false,
 })
 export function age(birthday: string) {
   if (!birthday) return ''
