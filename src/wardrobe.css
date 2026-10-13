@@ -2057,3 +2057,19 @@ textarea:focus-visible {
     animation: none !important;
   }
 }
+
+.quick-add-modal {
+  max-width: 600px;
+}
+.quick-add-modal .photo-intake > small {
+  display: block;
+  margin-top: 12px;
+}
+.card-photo-progress {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 7px 0;
+  color: #244f8f;
+  font-size: 11px;
+}

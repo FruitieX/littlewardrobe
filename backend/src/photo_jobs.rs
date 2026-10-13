@@ -30,11 +30,26 @@ pub struct PhotoJobView {
     pub error: Option<String>,
 }
 
+#[derive(Clone, Default, Deserialize, Serialize, TS)]
+#[serde(default, rename_all = "camelCase", deny_unknown_fields)]
+#[ts(export, export_to = "../../src/lib/api/")]
+pub struct PhotoDefaults {
+    pub child_id: Option<String>,
+    pub location_id: Option<String>,
+    pub status: Option<String>,
+    pub category: Option<String>,
+    pub size: Option<String>,
+    pub size_system: Option<String>,
+    pub season: Option<String>,
+}
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Intake {
     pub id: String,
     pub photos: Vec<GarmentPhoto>,
+    #[serde(default)]
+    pub defaults: PhotoDefaults,
 }
 
 fn history(
@@ -82,16 +97,23 @@ pub async fn create(
     let result = {
         let mut conn = server.db.lock()?;
         let tx = conn.transaction()?;
-        let previous: Option<(String, String)> = tx
+        let accepted = json!({"photos":input.photos,"defaults":input.defaults});
+        let previous: Option<(String, String, String)> = tx
             .query_row(
-                "SELECT household_id,baseline FROM clothing_photo_jobs WHERE id=?1",
+                "SELECT household_id,baseline,request FROM clothing_photo_jobs WHERE id=?1",
                 [&input.id],
-                |r| Ok((r.get(0)?, r.get(1)?)),
+                |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)),
             )
             .optional()?;
-        if let Some((household, baseline)) = previous {
+        if let Some((household, baseline, request)) = previous {
             let baseline: Garment = serde_json::from_str(&baseline)?;
-            if household != actor.household_id || baseline.photos != input.photos {
+            let request: Value = serde_json::from_str(&request)?;
+            let expected = if request == json!({}) {
+                json!({"photos":baseline.photos,"defaults":PhotoDefaults::default()})
+            } else {
+                request
+            };
+            if household != actor.household_id || expected != accepted {
                 return Err(ApiError::conflict());
             }
             return Ok(Json(json!({"id":input.id,"garmentId":baseline.id})));
@@ -105,11 +127,14 @@ pub async fn create(
         let garment = Garment {
             id: Uuid::new_v4().to_string(),
             name: "Photo awaiting details".into(),
-            category: "other".into(),
-            size_system: "other".into(),
-            season: "all".into(),
+            category: input.defaults.category.unwrap_or_else(|| "other".into()),
+            size: input.defaults.size.unwrap_or_default(),
+            size_system: input.defaults.size_system.unwrap_or_else(|| "other".into()),
+            season: input.defaults.season.unwrap_or_else(|| "all".into()),
             condition: "unknown".into(),
-            status: "stored".into(),
+            status: input.defaults.status.unwrap_or_else(|| "stored".into()),
+            child_id: input.defaults.child_id.unwrap_or_default(),
+            location_id: input.defaults.location_id.unwrap_or_default(),
             photos: input.photos,
             created_at: chrono::Utc::now().to_rfc3339(),
             ai_review: true,
@@ -126,7 +151,7 @@ pub async fn create(
             &mut snapshot,
             "Added photo for AI review",
         )?;
-        tx.execute("INSERT INTO clothing_photo_jobs(id,household_id,garment_id,actor,baseline) VALUES(?1,?2,?3,?4,?5)",params![input.id,actor.household_id,garment.id,actor.user.name,serde_json::to_string(&garment)?])?;
+        tx.execute("INSERT INTO clothing_photo_jobs(id,household_id,garment_id,actor,baseline,request) VALUES(?1,?2,?3,?4,?5,?6)",params![input.id,actor.household_id,garment.id,actor.user.name,serde_json::to_string(&garment)?,accepted.to_string()])?;
         tx.commit()?;
         json!({"id":input.id,"garmentId":garment.id})
     };
@@ -225,6 +250,7 @@ pub struct Job {
     actor: String,
     baseline: Garment,
     run_id: String,
+    defaults: PhotoDefaults,
 }
 
 /// Manual review, deleted entries and replaced photos invalidate queued work
@@ -256,8 +282,8 @@ pub fn guard_changes(
 fn claim(server: &Server) -> Result<Option<Job>> {
     let mut conn = server.db.lock()?;
     let tx = conn.transaction()?;
-    let next: Option<(String,String,String,String)> = tx.query_row("SELECT id,household_id,actor,baseline FROM clothing_photo_jobs WHERE status='queued' ORDER BY created_at,id LIMIT 1", [], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?))).optional()?;
-    let Some((id, household, actor, baseline)) = next else {
+    let next: Option<(String,String,String,String,String)> = tx.query_row("SELECT id,household_id,actor,baseline,request FROM clothing_photo_jobs WHERE status='queued' ORDER BY created_at,id LIMIT 1", [], |r| Ok((r.get(0)?,r.get(1)?,r.get(2)?,r.get(3)?,r.get(4)?))).optional()?;
+    let Some((id, household, actor, baseline, request)) = next else {
         return Ok(None);
     };
     let run_id = Uuid::new_v4().to_string();
@@ -271,6 +297,12 @@ fn claim(server: &Server) -> Result<Option<Job>> {
         household,
         actor,
         baseline: serde_json::from_str(&baseline)?,
+        defaults: serde_json::from_value(
+            serde_json::from_str::<Value>(&request)?["defaults"]
+                .as_object()
+                .map(|v| json!(v))
+                .unwrap_or_else(|| json!({})),
+        )?,
         run_id,
     }))
 }
@@ -314,7 +346,14 @@ fn finish(server: &Server, job: &Job, result: Result<Value>) -> Result<()> {
             "defects",
             "notes",
         ] {
-            if current[field] == baseline[field] {
+            let selected = match field {
+                "category" => job.defaults.category.is_some(),
+                "size" => job.defaults.size.is_some(),
+                "sizeSystem" => job.defaults.size_system.is_some(),
+                "season" => job.defaults.season.is_some(),
+                _ => false,
+            };
+            if !selected && current[field] == baseline[field] {
                 current[field] = result["garment"][field].clone();
                 applied.insert(field);
             }
@@ -326,8 +365,8 @@ fn finish(server: &Server, job: &Job, result: Result<Value>) -> Result<()> {
         g.ai_uncertain_fields = serde_json::from_value(result["uncertainFields"].clone())?;
         g.ai_uncertain_fields
             .retain(|field| applied.contains(field.as_str()));
-        g.ai_needs_tag_photo =
-            g.size.is_empty() || result["needsTagPhoto"].as_bool().unwrap_or(false);
+        g.ai_needs_tag_photo = g.size.is_empty()
+            || (job.defaults.size.is_none() && result["needsTagPhoto"].as_bool().unwrap_or(false));
         history(
             &tx,
             &job.household,

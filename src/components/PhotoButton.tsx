@@ -85,6 +85,7 @@ export function PhotoButton({
           aria-label={kind === 'camera' ? label : `${label} from gallery`}
           disabled={disabled}
           onChange={(event) => {
+            setMenu(false)
             const file = event.target.files?.[0]
             event.target.value = ''
             if (file) onFile(file)

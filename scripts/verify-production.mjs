@@ -691,23 +691,93 @@ try {
   // the pending entry while the provider is deliberately held.
   await navigation(mobile, 'Wardrobe')
   await navigation(page, 'Wardrobe')
-  const intake = mobile.getByRole('region', { name: 'Add clothes from photos' })
-  await intake.getByRole('button', { name: 'Add from photo options' }).click()
-  await intake.getByRole('button', { name: 'Choose from gallery' }).waitFor()
+  const intake = mobile.getByRole('region', { name: 'Quick add clothes' })
+  const beforeQuick = (await call(owner, '/state')).state
+  const quickChild = beforeQuick.children.find((child) => child.name === 'Alex')
+  const quickLocation = beforeQuick.locations.find(
+    (location) => location.name === 'Attic · winter box',
+  )
+  await mobile
+    .locator('.children-tabs')
+    .getByRole('button', { name: 'Alex', exact: true })
+    .click()
+  await mobile
+    .locator('.status-tabs')
+    .getByRole('button', { name: 'In rotation', exact: true })
+    .click()
+  if (
+    (await mobile
+      .getByRole('button', { name: 'Filters', exact: true })
+      .getAttribute('aria-expanded')) !== 'true'
+  )
+    await mobile.getByRole('button', { name: 'Filters', exact: true }).click()
+  const quickFilters = mobile.locator('.filter-grid')
+  await quickFilters.getByLabel('Category').selectOption('outerwear')
+  await quickFilters.getByLabel('Size', { exact: true }).fill('110')
+  await quickFilters.getByLabel('Season').selectOption('winter')
+  await quickFilters.getByLabel('Location').selectOption(quickLocation.id)
+  await intake.getByRole('button', { name: 'Quick add', exact: true }).click()
+  let quickDialog = mobile.getByRole('dialog')
   assert.equal(
-    await intake
-      .getByLabel('Add from photo from gallery', { exact: true })
+    await quickDialog.getByLabel('Quick add child').inputValue(),
+    quickChild.id,
+  )
+  assert.equal(
+    await quickDialog.getByLabel('Quick add location').inputValue(),
+    quickLocation.id,
+  )
+  await quickDialog.getByText('Starting details', { exact: true }).click()
+  assert.equal(
+    await quickDialog.getByLabel('Category').inputValue(),
+    'outerwear',
+  )
+  assert.equal(await quickDialog.getByLabel('Size on tag').inputValue(), '110')
+  await quickDialog.getByLabel('Size system').selectOption('cm')
+  await quickDialog.getByText('Starting details', { exact: true }).click()
+  await quickDialog.getByRole('button', { name: 'Add photo options' }).click()
+  await quickDialog
+    .getByRole('button', { name: 'Choose from gallery' })
+    .waitFor()
+  assert.equal(
+    await quickDialog
+      .getByLabel('Add photo from gallery', { exact: true })
       .getAttribute('capture'),
     null,
   )
   holdPhotoRequests = true
-  await intake
-    .getByLabel('Add from photo from gallery', { exact: true })
+  await quickDialog
+    .getByLabel('Add photo from gallery', { exact: true })
     .setInputFiles({
       name: 'background-shirt.png',
       mimeType: 'image/png',
       buffer: photo,
     })
+  await quickDialog.locator('.photo-thumb').first().waitFor()
+  await quickDialog.getByLabel('Add photo', { exact: true }).setInputFiles({
+    name: 'background-tag.png',
+    mimeType: 'image/png',
+    buffer: tagPhoto,
+  })
+  await waitFor(
+    async () => (await quickDialog.locator('.photo-thumb').count()) === 2,
+    'two quick-add photos uploaded',
+  )
+  await quickDialog.getByLabel('Photo 2 type').selectOption('tag')
+  assert.equal(heldPhotoRequests.length, 0)
+  assert.equal((await call(owner, '/state')).state.garments.length, 9)
+  await screenshot(mobile, 'quick-add-mobile')
+  await quickDialog.getByRole('button', { name: 'Close dialog' }).click()
+  await intake.getByRole('button', { name: 'Quick add', exact: true }).click()
+  quickDialog = mobile.getByRole('dialog')
+  assert.equal(await quickDialog.locator('.photo-thumb').count(), 2)
+  assert.equal(
+    await quickDialog.getByLabel('Quick add child').inputValue(),
+    quickChild.id,
+  )
+  await quickDialog
+    .getByRole('button', { name: 'Add to wardrobe', exact: true })
+    .click()
+  await quickDialog.waitFor({ state: 'hidden' })
   await waitFor(
     async () => heldPhotoRequests.length === 1,
     'background provider started',
@@ -716,6 +786,35 @@ try {
     (g) => g.name === 'Photo awaiting details',
   )
   assert.ok(pendingPhoto?.aiReview)
+  assert.equal(pendingPhoto.childId, quickChild.id)
+  assert.equal(pendingPhoto.locationId, quickLocation.id)
+  assert.equal(pendingPhoto.status, 'active')
+  assert.equal(pendingPhoto.category, 'outerwear')
+  assert.equal(pendingPhoto.size, '110')
+  assert.equal(pendingPhoto.season, 'winter')
+  assert.deepEqual(
+    pendingPhoto.photos.map((photo) => photo.kind),
+    ['front', 'tag'],
+  )
+  const pendingCard = mobile
+    .locator('.garment-card')
+    .filter({ hasText: 'Photo awaiting details' })
+  await pendingCard.locator('.card-photo-progress .spin').waitFor()
+  await pendingCard.getByText('AI · needs review', { exact: true }).waitFor()
+  await screenshot(mobile, 'quick-add-pending-mobile')
+  await intake.getByRole('button', { name: 'Quick add', exact: true }).click()
+  const nextQuick = mobile.getByRole('dialog')
+  assert.equal(await nextQuick.locator('.photo-thumb').count(), 0)
+  assert.equal(
+    await nextQuick.getByLabel('Quick add child').inputValue(),
+    quickChild.id,
+  )
+  assert.equal(
+    await nextQuick.getByLabel('Quick add location').inputValue(),
+    quickLocation.id,
+  )
+  await nextQuick.getByRole('button', { name: 'Cancel', exact: true }).click()
+
   const queuedJob = (await call(owner, '/ai/photo-jobs')).find(
     (job) => job.garmentId === pendingPhoto.id,
   )
@@ -723,6 +822,15 @@ try {
   await call(wife, '/ai/photo-jobs', 'POST', {
     id: queuedJob.id,
     photos: pendingPhoto.photos,
+    defaults: {
+      childId: quickChild.id,
+      locationId: quickLocation.id,
+      status: 'active',
+      category: 'outerwear',
+      size: '110',
+      sizeSystem: 'cm',
+      season: 'winter',
+    },
   })
   await mobile.reload()
   await mobile.locator('[data-app-ready="true"]').first().waitFor()
@@ -742,7 +850,12 @@ try {
     )
     return (
       garment?.name === 'Striped cotton shirt' &&
-      garment.brand === 'Manual brand'
+      garment.brand === 'Manual brand' &&
+      garment.category === 'outerwear' &&
+      garment.size === '110' &&
+      garment.season === 'winter' &&
+      garment.childId === quickChild.id &&
+      garment.locationId === quickLocation.id
     )
   }, 'background AI merges without overwriting manual brand')
   for (const device of [page, mobile]) {
@@ -759,7 +872,7 @@ try {
     .waitFor()
   assert.equal(
     await backgroundDialog.getByLabel('Size on tag').inputValue(),
-    '',
+    '110',
   )
   await screenshot(mobile, 'background-photo-review-mobile')
   // Header and close control remain in the viewport at the bottom of the form.
@@ -789,12 +902,20 @@ try {
     'adult reviewed background draft',
   )
 
+  async function submitQuickPhoto(name) {
+    await intake.getByRole('button', { name: 'Quick add', exact: true }).click()
+    const modal = mobile.getByRole('dialog')
+    await modal
+      .getByLabel('Add photo', { exact: true })
+      .setInputFiles({ name, mimeType: 'image/png', buffer: photo })
+    await modal.locator('.photo-thumb').first().waitFor()
+    await modal
+      .getByRole('button', { name: 'Add to wardrobe', exact: true })
+      .click()
+    await modal.waitFor({ state: 'hidden' })
+  }
   invalidExtraction = true
-  await intake.getByLabel('Add from photo', { exact: true }).setInputFiles({
-    name: 'failed-shirt.png',
-    mimeType: 'image/png',
-    buffer: photo,
-  })
+  await submitQuickPhoto('failed-shirt.png')
   await waitFor(
     async () =>
       (await call(owner, '/ai/photo-jobs')).some(
@@ -823,11 +944,7 @@ try {
   assert.equal(retryPhoto.photos[0].kind, 'front')
 
   holdPhotoRequests = true
-  await intake.getByLabel('Add from photo', { exact: true }).setInputFiles({
-    name: 'cancel-shirt.png',
-    mimeType: 'image/png',
-    buffer: photo,
-  })
+  await submitQuickPhoto('cancel-shirt.png')
   await waitFor(
     async () => heldPhotoRequests.length === 1,
     'cancelable background task started',
@@ -904,7 +1021,7 @@ try {
     'These are real production browser screenshots using an isolated test household, deterministic illustrated clothing fixtures and a controlled AI provider. The running app starts empty. Regenerate with `nix develop --command npm run test:production`.\n',
   )
   console.log(
-    'Production browser checks passed: two accounts, private photos, configurable children/storage, tag intake, durable background photo intake/retry/cancel/review, fixed dialog headers, reviewed AI, image references, hand-me-downs, offline reload/reconnect, sale approvals/export/price changes, sale history, bundles, backup/restore and 320–1440px layouts.',
+    'Production browser checks passed: two accounts, private photos, configurable children/storage, tag intake, filter-aware multi-photo Quick add, pending card spinners, background retry/cancel/review, fixed dialog headers, reviewed AI, image references, hand-me-downs, offline reload/reconnect, sale approvals/export/price changes, sale history, bundles, backup/restore and 320–1440px layouts.',
   )
 } catch (error) {
   await mkdir('test-results', { recursive: true })

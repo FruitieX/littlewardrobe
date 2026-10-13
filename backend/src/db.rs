@@ -59,7 +59,7 @@ impl Database {
             [],
             |row| row.get(0),
         )?;
-        if version > 7 {
+        if version > 8 {
             return Err(ApiError::internal(
                 "This database was created by a newer Little Wardrobe version. Restore a compatible backup before downgrading.",
             ));
@@ -97,6 +97,11 @@ impl Database {
         if version < 7 {
             conn.execute_batch("BEGIN IMMEDIATE")?;
             conn.execute_batch(include_str!("../migrations/007_photo_intake.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
+        if version < 8 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/008_quick_add.sql"))?;
             conn.execute_batch("COMMIT")?;
         }
         conn.execute(

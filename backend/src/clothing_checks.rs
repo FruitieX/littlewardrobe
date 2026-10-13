@@ -95,9 +95,48 @@ async fn background_photo_jobs_survive_requests_and_guard_edits_cancellation_rev
         StatusCode::OK
     );
     assert_eq!(request(&server,Method::POST,"/api/ai/photo-jobs",json!({"id":uuid::Uuid::new_v4().to_string(),"photos":[{"url":enhanced,"kind":"front"}]}),Some(&cookie)).await.0,StatusCode::BAD_REQUEST);
-    for mode in ["success", "edit", "cancel", "delete", "review", "fail"] {
+    let child = json!({"id":"quick-child","name":"A","birthDate":"","clothingSize":"110","shoeSize":"","color":"blue"});
+    let location = json!({"id":"quick-box","name":"Blue box","note":""});
+    assert_eq!(
+        operation(
+            &server,
+            &cookie,
+            patch("children", "quick-child", Value::Null, child)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    assert_eq!(
+        operation(
+            &server,
+            &cookie,
+            patch("locations", "quick-box", Value::Null, location)
+        )
+        .await
+        .0,
+        StatusCode::OK
+    );
+    for defaults in [
+        json!({"childId":"another-household-child"}),
+        json!({"locationId":"another-household-box"}),
+        json!({"category":"invalid"}),
+        json!({"status":"invalid"}),
+        json!({"sizeSystem":"invalid"}),
+        json!({"season":"invalid"}),
+    ] {
+        assert_eq!(request(&server,Method::POST,"/api/ai/photo-jobs",json!({"id":uuid::Uuid::new_v4().to_string(),"photos":[{"url":original,"kind":"front"}],"defaults":defaults}),Some(&cookie)).await.0,StatusCode::BAD_REQUEST);
+    }
+    for mode in [
+        "success", "legacy", "filters", "edit", "cancel", "delete", "review", "fail",
+    ] {
         let id = uuid::Uuid::new_v4().to_string();
-        let input = json!({"id":id,"photos":[{"url":original,"kind":"front"}]});
+        let defaults = if mode == "filters" {
+            json!({"childId":"quick-child","locationId":"quick-box","status":"active","category":"outerwear","size":"110","sizeSystem":"cm","season":"winter"})
+        } else {
+            json!({})
+        };
+        let input = json!({"id":id,"photos":[{"url":original,"kind":"front"}],"defaults":defaults});
         let (code, created, _) = request(
             &server,
             Method::POST,
@@ -108,15 +147,41 @@ async fn background_photo_jobs_survive_requests_and_guard_edits_cancellation_rev
         .await;
         assert_eq!(code, StatusCode::OK, "{created}");
         let garment_id = created["garmentId"].as_str().unwrap();
+        if mode == "legacy" {
+            server
+                .db
+                .lock()
+                .unwrap()
+                .execute(
+                    "UPDATE clothing_photo_jobs SET request='{}' WHERE id=?1",
+                    [&id],
+                )
+                .unwrap();
+        }
+
         let (_, retry, _) = request(
             &server,
             Method::POST,
             "/api/ai/photo-jobs",
-            input,
+            input.clone(),
             Some(&cookie),
         )
         .await;
         assert_eq!(retry, created);
+        let mut changed_request = input.clone();
+        changed_request["defaults"]["status"] = json!("sell");
+        assert_eq!(
+            request(
+                &server,
+                Method::POST,
+                "/api/ai/photo-jobs",
+                changed_request,
+                Some(&cookie)
+            )
+            .await
+            .0,
+            StatusCode::CONFLICT
+        );
         // Reopening the persisted database sees the queued work and saved photo.
         let reopened = db::Database::open(&dir.path().join("test.sqlite3")).unwrap();
         assert_eq!(
@@ -233,7 +298,22 @@ async fn background_photo_jobs_survive_requests_and_guard_edits_cancellation_rev
         let item = item.unwrap();
         assert_eq!(item["photos"][0]["url"], original);
         match mode {
-            "success" => {
+            "filters" => {
+                assert_eq!(item["name"], "AI cotton shirt");
+                for (key, value) in [
+                    ("childId", "quick-child"),
+                    ("locationId", "quick-box"),
+                    ("status", "active"),
+                    ("category", "outerwear"),
+                    ("size", "110"),
+                    ("sizeSystem", "cm"),
+                    ("season", "winter"),
+                ] {
+                    assert_eq!(item[key], value);
+                }
+                assert!(item["aiEvidence"].get("size").is_none());
+            }
+            "success" | "legacy" => {
                 assert_eq!(item["name"], "AI cotton shirt");
                 assert_eq!(item["aiReview"], true);
                 assert_eq!(item["aiEvidence"]["size"], "Printed tag");

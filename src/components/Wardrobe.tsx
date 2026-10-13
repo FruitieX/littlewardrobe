@@ -48,6 +48,7 @@ import {
   recordChanges,
 } from '../lib/wardrobe'
 import type { GarmentPhoto } from '../lib/api/GarmentPhoto'
+import type { PhotoJobView } from '../lib/api/PhotoJobView'
 import type { StorageLocation } from '../lib/api/StorageLocation'
 
 const Icon = ({ type, size = 36 }: { type: string; size?: number }) =>
@@ -90,6 +91,7 @@ export function Wardrobe() {
     [location, setLocation] = useState('all')
   const [filters, setFilters] = useState(false),
     [editing, setEditing] = useState<Garment | null>(null)
+  const [photoJobs, setPhotoJobs] = useState<PhotoJobView[]>([])
   const garments = state.garments ?? [],
     children = state.children ?? [],
     locations = state.locations ?? [],
@@ -282,6 +284,16 @@ export function Wardrobe() {
                 </div>
               </div>
               <PhotoIntake
+                defaults={{
+                  childId: child === 'all' ? null : child,
+                  locationId: location === 'all' ? null : location,
+                  status: filter === 'owned' ? null : filter,
+                  category: category === 'all' ? null : category,
+                  size: size.trim() || null,
+                  sizeSystem: size.trim() ? 'other' : null,
+                  season: season === 'all' ? null : season,
+                }}
+                onJobsChange={setPhotoJobs}
                 onOpen={(id) => {
                   const garment = garments.find((g) => g.id === id)
                   if (garment) setEditing(garment)
@@ -388,6 +400,10 @@ export function Wardrobe() {
                     <button
                       className="garment-card"
                       key={g.id}
+                      data-photo-job-status={
+                        photoJobs.find((job) => job.garmentId === g.id)
+                          ?.status ?? 'none'
+                      }
                       onClick={() => setEditing(g)}
                     >
                       <div className={`garment-image ${g.category}`}>
@@ -408,6 +424,16 @@ export function Wardrobe() {
                             categories[g.category as keyof typeof categories]}
                         </div>
                         <h3>{g.name}</h3>
+                        {photoJobs.some(
+                          (job) =>
+                            job.garmentId === g.id &&
+                            ['queued', 'running'].includes(job.status),
+                        ) && (
+                          <span className="card-photo-progress" role="status">
+                            <LoaderCircle className="spin" size={14} /> Reading
+                            photos…
+                          </span>
+                        )}
                         {g.aiReview && (
                           <Pill tone="peach">AI · needs review</Pill>
                         )}
