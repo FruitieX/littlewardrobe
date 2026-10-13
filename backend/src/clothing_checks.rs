@@ -291,7 +291,7 @@ async fn clothing_ai_reads_private_photos_returns_only_drafts_and_excludes_priva
     let (server, _dir) = server();
     let cookie = owner(&server).await;
     let original = photo(&server, &cookie, "original");
-    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture","imageModel":"","imageSize":"1024x1024","responseFormat":"json","tokenParameter":"omit"});
+    let config = json!({"enabled":true,"baseUrl":format!("http://{address}/v1"),"model":"fixture","imageModel":"","imageSize":"1024x1024","responseFormat":"schema","tokenParameter":"omit"});
     assert_eq!(
         request(
             &server,
@@ -354,6 +354,27 @@ async fn clothing_ai_reads_private_photos_returns_only_drafts_and_excludes_priva
             .starts_with("data:image/png;base64,")
     );
     assert!(calls[0].get("omit").is_none());
+    for field in ["category", "sizeSystem", "season", "condition"] {
+        assert_eq!(
+            calls[0]["response_format"]["json_schema"]["schema"]["properties"][field]["enum"],
+            json!(match field {
+                "category" => vec![
+                    "tops",
+                    "bottoms",
+                    "one-pieces",
+                    "knitwear",
+                    "outerwear",
+                    "sleepwear",
+                    "shoes",
+                    "accessories",
+                    "other"
+                ],
+                "sizeSystem" => vec!["cm", "age", "eu-shoe", "alpha", "other"],
+                "season" => vec!["all", "spring", "summer", "autumn", "winter"],
+                _ => vec!["unknown", "new", "excellent", "good", "fair", "repair"],
+            })
+        );
+    }
     assert!(!calls[1].to_string().contains("private family note"));
     task.abort();
 }
@@ -394,7 +415,7 @@ async fn clothing_companion_routes_photos_and_rejects_malformed_results_without_
     let _ = companion::heartbeat(axum::extract::State(server.clone()), headers.clone())
         .await
         .unwrap();
-    for malformed in [false, true] {
+    for mode in ["valid", "not-json", "empty-season"] {
         let app = server.clone();
         let auth = cookie.clone();
         let body = input.clone();
@@ -420,10 +441,10 @@ async fn clothing_companion_routes_photos_and_rejects_malformed_results_without_
                 .unwrap()
                 .starts_with("data:image/png;base64,")
         );
-        let text = if malformed {
+        let text = if mode == "not-json" {
             "not JSON".to_owned()
         } else {
-            json!({"name":"Cotton shirt","size":"98","category":"tops","sizeSystem":"cm","condition":"good","season":"all","evidence":{"size":"Printed tag"},"uncertainFields":["condition"],"needsTagPhoto":false}).to_string()
+            json!({"name":"Cotton shirt","size":"98","category":"tops","sizeSystem":"cm","condition":"good","season":if mode == "empty-season" { "" } else { "all" },"evidence":{"size":"Printed tag"},"uncertainFields":["condition"],"needsTagPhoto":false}).to_string()
         };
         let _ = companion::complete(
             axum::extract::State(server.clone()),
@@ -440,14 +461,23 @@ async fn clothing_companion_routes_photos_and_rejects_malformed_results_without_
         let (code, result, _) = pending.await.unwrap();
         assert_eq!(
             code,
-            if malformed {
+            if mode != "valid" {
                 StatusCode::BAD_REQUEST
             } else {
                 StatusCode::OK
             },
             "{result}"
         );
-        if !malformed {
+        if mode == "empty-season" {
+            assert!(
+                result["message"]
+                    .as_str()
+                    .unwrap()
+                    .contains("unsupported season"),
+                "{result}"
+            );
+        }
+        if mode == "valid" {
             assert_eq!(result["garment"]["size"], "98");
         }
     }

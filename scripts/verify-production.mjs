@@ -13,6 +13,7 @@ let backend, browser
 const errors = []
 const calls = []
 let editedImage = ''
+let invalidExtraction = false
 const provider = createServer(async (req, res) => {
   let raw = ''
   for await (const chunk of req) raw += chunk
@@ -37,7 +38,7 @@ const provider = createServer(async (req, res) => {
           sizeSystem: 'cm',
           color: 'Sage green',
           material: 'Cotton',
-          season: 'all',
+          season: invalidExtraction ? '' : 'all',
           condition: 'good',
           defects: 'Small mark on the sleeve.',
           notes: '',
@@ -324,6 +325,22 @@ try {
     .getByLabel('Upload clothing photo')
     .setInputFiles({ name: 'shirt.png', mimeType: 'image/png', buffer: photo })
   await dialog.locator('.photo-thumb').first().waitFor()
+  await dialog
+    .getByLabel('Name', { exact: true })
+    .fill('My unsaved clothing draft')
+  invalidExtraction = true
+  await dialog
+    .getByRole('button', { name: 'Suggest details from photos' })
+    .click()
+  await dialog
+    .getByText('The AI returned an unsupported season.', { exact: false })
+    .waitFor()
+  assert.equal(
+    await dialog.getByLabel('Name', { exact: true }).inputValue(),
+    'My unsaved clothing draft',
+  )
+  assert.equal(await dialog.locator('.photo-thumb').count(), 1)
+  invalidExtraction = false
   await dialog
     .getByRole('button', { name: 'Suggest details from photos' })
     .click()
