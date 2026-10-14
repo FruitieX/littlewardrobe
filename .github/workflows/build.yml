@@ -9,6 +9,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    outputs:
+      digest: ${{ steps.publish.outputs.digest }}
     concurrency:
       group: littlewardrobe-${{ github.ref }}
       cancel-in-progress: true
@@ -37,6 +39,7 @@ jobs:
           docker load -i result-container
           nix develop --command npm run test:container
       - name: Publish container
+        id: publish
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
         env:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -45,6 +48,9 @@ jobs:
           docker tag ghcr.io/fruitiex/littlewardrobe:main ghcr.io/fruitiex/littlewardrobe:${{ github.sha }}
           docker push ghcr.io/fruitiex/littlewardrobe:main
           docker push ghcr.io/fruitiex/littlewardrobe:${{ github.sha }}
+          reference="$(docker inspect --format '{{index .RepoDigests 0}}' ghcr.io/fruitiex/littlewardrobe:${{ github.sha }})"
+          [[ "$reference" == ghcr.io/fruitiex/littlewardrobe@sha256:* ]]
+          printf 'digest=%s\n' "${reference##*@}" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -52,3 +58,38 @@ jobs:
           path: |
             mockups/
             test-results/
+
+  deploy:
+    name: Deploy to homelab
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Skip superseded builds
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          head="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)"
+          if [[ "$head" != "$GITHUB_SHA" ]]; then
+            echo "A newer commit exists on main, skipping deployment of this build."
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Deploy to homelab
+        if: steps.check.outputs.enabled == 'true'
+        uses: peter-evans/repository-dispatch@28959ce8df70de7be546dd1250a005dd32156697 # v4.0.1
+        with:
+          token: ${{ secrets.HOMELAB_DISPATCH_TOKEN }}
+          repository: FruitieX/homelab
+          event-type: image-update
+          client-payload: |
+            {
+              "image": "ghcr.io/fruitiex/littlewardrobe",
+              "digest": "${{ needs.build.outputs.digest }}",
+              "revision": "${{ github.sha }}"
+            }
