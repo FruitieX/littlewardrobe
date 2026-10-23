@@ -3861,3 +3861,12 @@ svg {
   font-size: 0.8rem;
   overflow-wrap: anywhere;
 }
+.auth-alternates {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 16px;
+}
+.auth-card a.primary-button {
+  text-decoration: none;
+}

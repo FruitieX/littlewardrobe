@@ -54,6 +54,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false)
   const [booted, setBooted] = useState(false)
   const [setupRequired, setSetupRequired] = useState(false)
+  const [oidc, setOidc] = useState(false)
   const [status, setStatus] = useState<SyncStatus>('connecting')
   const [pending, setPending] = useState<Pending[]>([])
   const [error, setError] = useState('')
@@ -79,10 +80,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (error instanceof HttpError && error.status === 401) {
         localStorage.removeItem(cachedSession)
         try {
-          setSetupRequired(
-            (await api<{ setupRequired: boolean }>('/auth/status'))
-              .setupRequired,
-          )
+          const status = await api<{
+            setupRequired: boolean
+            oidc?: boolean
+          }>('/auth/status')
+          setSetupRequired(status.setupRequired)
+          setOidc(status.oidc === true)
         } catch {
           setError(
             'Cannot reach the server. Check your connection and try again.',
@@ -381,6 +384,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return
     }
     await post('/auth/logout', {})
+    void api<{ oidc?: boolean }>('/auth/status')
+      .then((status) => setOidc(status.oidc === true))
+      .catch(() => {})
     if (session) {
       localStorage.removeItem(cacheKey(session))
       localStorage.removeItem(queueKey(session, tab.current))
@@ -418,6 +424,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return (
       <AuthScreen
         setupRequired={setupRequired}
+        oidc={oidc}
         error={error}
         retry={() => void boot()}
         onSignedIn={(session, recoveryCode) => {

@@ -856,6 +856,9 @@ async fn companion_jobs_are_scoped_claimed_once_revocable_and_forward_requested_
 }
 
 pub(super) fn server() -> (Server, tempfile::TempDir) {
+    server_with(None)
+}
+fn server_with(oidc: Option<oidc::Oidc>) -> (Server, tempfile::TempDir) {
     let directory = tempfile::tempdir().expect("temporary data directory");
     let config = Arc::new(Config {
         origin: "http://localhost:3101".into(),
@@ -863,6 +866,7 @@ pub(super) fn server() -> (Server, tempfile::TempDir) {
         setup_token: "test-bootstrap-secret".into(),
         data_dir: directory.path().into(),
         encryption_key: [19u8; 32],
+        oidc,
     });
     let (notices, _) = broadcast::channel(64);
     (
@@ -2201,4 +2205,305 @@ async fn handler_panics_return_json_and_rate_limits_recover() {
     );
     server.rate_limit("after-panic", 2, 60).unwrap();
     assert!(!server.limits.is_poisoned());
+}
+
+/// A minimal OpenID provider: `/authorize` hands back a code for whichever
+/// user the test chose, and `/token` returns that user's ID token.
+async fn mock_provider(user: Arc<Mutex<Value>>) -> String {
+    use axum::extract::{Form, Query};
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let issuer = format!("http://{}", listener.local_addr().unwrap());
+    let codes: Arc<Mutex<HashMap<String, Value>>> = Arc::default();
+    let discovery = json!({
+        "issuer": issuer,
+        "authorization_endpoint": format!("{issuer}/authorize"),
+        "token_endpoint": format!("{issuer}/token"),
+    });
+    let authorize_codes = codes.clone();
+    let token_issuer = issuer.clone();
+    let router = Router::new()
+        .route(
+            "/.well-known/openid-configuration",
+            get(move || async move { Json(discovery) }),
+        )
+        .route(
+            "/authorize",
+            get(
+                move |Query(query): Query<HashMap<String, String>>| async move {
+                    assert_eq!(query["code_challenge_method"], "S256");
+                    let code = uuid::Uuid::new_v4().to_string();
+                    let mut claims = user.lock().unwrap().clone();
+                    claims["nonce"] = json!(query["nonce"]);
+                    claims["challenge"] = json!(query["code_challenge"]);
+                    authorize_codes.lock().unwrap().insert(code.clone(), claims);
+                    let location = format!(
+                        "{}?code={code}&state={}",
+                        query["redirect_uri"], query["state"]
+                    );
+                    (StatusCode::FOUND, [(header::LOCATION, location)])
+                },
+            ),
+        )
+        .route(
+            "/token",
+            post(
+                move |Form(form): Form<HashMap<String, String>>| async move {
+                    let Some(mut claims) = codes.lock().unwrap().remove(&form["code"]) else {
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({"error":"invalid_grant"})),
+                        );
+                    };
+                    use base64::Engine;
+                    use sha2::Digest;
+                    let challenge = base64::engine::general_purpose::URL_SAFE_NO_PAD
+                        .encode(sha2::Sha256::digest(form["code_verifier"].as_bytes()));
+                    if claims["challenge"] != json!(challenge) || form["client_secret"] != "secret"
+                    {
+                        return (
+                            StatusCode::BAD_REQUEST,
+                            Json(json!({"error":"invalid_grant"})),
+                        );
+                    }
+                    claims["iss"] = json!(token_issuer);
+                    claims["aud"] = json!("littlewardrobe");
+                    claims["exp"] = json!(chrono::Utc::now().timestamp() + 60);
+                    let payload = base64::engine::general_purpose::URL_SAFE_NO_PAD
+                        .encode(serde_json::to_vec(&claims).unwrap());
+                    (
+                        StatusCode::OK,
+                        Json(json!({"id_token": format!("e30.{payload}.sig")})),
+                    )
+                },
+            ),
+        );
+    tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    issuer
+}
+
+async fn raw(server: &Server, path: &str, cookie: Option<&str>) -> axum::response::Response {
+    let mut request = Request::builder().uri(path);
+    if let Some(cookie) = cookie {
+        request = request.header(header::COOKIE, cookie);
+    }
+    app(server.clone())
+        .oneshot(request.body(Body::empty()).unwrap())
+        .await
+        .unwrap()
+}
+fn cookies(response: &axum::response::Response) -> Vec<String> {
+    response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .map(|value| value.to_str().unwrap().to_string())
+        .collect()
+}
+/// Runs the browser side of a sign-in and returns where the app sent it back
+/// to, plus the session cookie if one was issued.
+async fn oidc_sign_in(server: &Server) -> (String, Option<String>, Vec<String>) {
+    let start = raw(server, "/api/auth/oidc/login", None).await;
+    assert_eq!(start.status(), StatusCode::SEE_OTHER);
+    let state = cookies(&start)
+        .into_iter()
+        .find(|c| c.starts_with("littlewardrobe_oidc="))
+        .unwrap();
+    let state = state.split(';').next().unwrap().to_string();
+    let authorize = start.headers()[header::LOCATION].to_str().unwrap();
+    let provider = reqwest::Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .unwrap()
+        .get(authorize)
+        .send()
+        .await
+        .unwrap();
+    let callback = provider.headers()["location"].to_str().unwrap();
+    let path = &callback[callback.find("/api/").unwrap()..];
+    let done = raw(server, path, Some(&state)).await;
+    assert_eq!(done.status(), StatusCode::SEE_OTHER);
+    let set = cookies(&done);
+    let session = set
+        .iter()
+        .find(|c| c.starts_with("littlewardrobe_session=") && !c.contains("Max-Age=0"))
+        .map(|c| c.split(';').next().unwrap().to_string());
+    (
+        done.headers()[header::LOCATION].to_str().unwrap().into(),
+        session,
+        set,
+    )
+}
+
+#[tokio::test]
+async fn oidc_links_mapped_accounts_provisions_family_and_refuses_other_groups() {
+    let user = Arc::new(Mutex::new(json!({})));
+    let issuer = mock_provider(user.clone()).await;
+    let (server, _dir) = server_with(Some(oidc::Oidc::new(oidc::OidcConfig {
+        issuer: issuer.clone(),
+        client_id: "littlewardrobe".into(),
+        client_secret: "secret".into(),
+        redirect_url: "http://localhost:3101/api/auth/oidc/callback".into(),
+        allowed_groups: vec!["family".into()],
+        user_map: vec![("rasse".into(), "owner@example.test".into())],
+    })));
+    let status = request(&server, Method::GET, "/api/auth/status", Value::Null, None).await;
+    assert_eq!(status.1["oidc"], true);
+    let password_cookie = owner(&server).await;
+
+    // The owner's existing password account is linked through the map.
+    *user.lock().unwrap() = json!({"sub":"sub-rasse","preferred_username":"rasse","name":"Rasse","groups":["admins","family"]});
+    let (location, session, set) = oidc_sign_in(&server).await;
+    assert_eq!(location, "/");
+    assert!(
+        set.iter()
+            .any(|c| c.starts_with("littlewardrobe_session=") && c.contains("Max-Age=31536000"))
+    );
+    assert!(
+        set.iter()
+            .any(|c| c.starts_with("littlewardrobe_oidc=;") && c.contains("Max-Age=0"))
+    );
+    let session = session.unwrap();
+    let me = request(
+        &server,
+        Method::GET,
+        "/api/auth/me",
+        Value::Null,
+        Some(&session),
+    )
+    .await;
+    assert_eq!(me.1["user"]["email"], "owner@example.test");
+    assert_eq!(me.1["user"]["role"], "owner");
+    // The link is by subject from now on, even if the username changes.
+    *user.lock().unwrap() =
+        json!({"sub":"sub-rasse","preferred_username":"renamed","groups":["family"]});
+    let me_again = request(
+        &server,
+        Method::GET,
+        "/api/auth/me",
+        Value::Null,
+        Some(&oidc_sign_in(&server).await.1.unwrap()),
+    )
+    .await;
+    assert_eq!(me_again.1["user"]["email"], "owner@example.test");
+    // Password sign-in is untouched, and its session neither slides nor refreshes.
+    let (status, _, _) = request(
+        &server,
+        Method::POST,
+        "/api/auth/login",
+        json!({"email":"owner@example.test","password":"a sufficiently long password"}),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(cookies(&raw(&server, "/api/auth/me", Some(&password_cookie)).await).is_empty());
+
+    // A recreated provider user with the mapped username cannot take over.
+    *user.lock().unwrap() =
+        json!({"sub":"sub-imposter","preferred_username":"rasse","groups":["family"]});
+    let (location, session, _) = oidc_sign_in(&server).await;
+    assert_eq!(location, "/?oidcError=no_account");
+    assert!(session.is_none());
+
+    // Family members without an account join the only household, password-less.
+    *user.lock().unwrap() = json!({"sub":"sub-new","preferred_username":"newbie","name":"New Member","groups":["family"]});
+    let (_, session, _) = oidc_sign_in(&server).await;
+    let me = request(
+        &server,
+        Method::GET,
+        "/api/auth/me",
+        Value::Null,
+        Some(&session.unwrap()),
+    )
+    .await;
+    let host = issuer.trim_start_matches("http://");
+    assert_eq!(me.1["user"]["email"], format!("newbie@{host}"));
+    assert_eq!(me.1["user"]["name"], "New Member");
+    assert_eq!(
+        me.1["householdId"],
+        status_household(&server, &password_cookie).await
+    );
+    let (status, _, _) = request(
+        &server,
+        Method::POST,
+        "/api/auth/login",
+        json!({"email":format!("newbie@{host}"),"password":"!"}),
+        None,
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+
+    // Other groups are refused without an account or session.
+    *user.lock().unwrap() = json!({"sub":"sub-kid","preferred_username":"kid","groups":["kids"]});
+    let (location, session, _) = oidc_sign_in(&server).await;
+    assert_eq!(location, "/?oidcError=not_allowed");
+    assert!(session.is_none());
+    let count: i64 = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT COUNT(*) FROM users", [], |r| r.get(0))
+        .unwrap();
+    assert_eq!(count, 2);
+
+    // A callback without the matching state cookie is refused.
+    let wrong = raw(
+        &server,
+        "/api/auth/oidc/callback?code=x&state=y",
+        Some("littlewardrobe_oidc=z"),
+    )
+    .await;
+    assert_eq!(wrong.headers()[header::LOCATION], "/?oidcError=expired");
+}
+async fn status_household(server: &Server, cookie: &str) -> Value {
+    request(
+        server,
+        Method::GET,
+        "/api/auth/me",
+        Value::Null,
+        Some(cookie),
+    )
+    .await
+    .1["householdId"]
+        .clone()
+}
+
+#[tokio::test]
+async fn oidc_sessions_slide_and_refresh_their_cookie() {
+    let (server, _dir) = server();
+    owner(&server).await;
+    let user: String = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT id FROM users", [], |r| r.get(0))
+        .unwrap();
+    let (raw_token, cookie) = auth::create_session(&server, &user, true).unwrap();
+    assert!(cookie.contains("Max-Age=31536000"));
+    let session = format!("littlewardrobe_session={raw_token}");
+    let soon = chrono::Utc::now().timestamp() + 100 * 86400;
+    server
+        .db
+        .lock()
+        .unwrap()
+        .execute("UPDATE sessions SET expires_at=?1 WHERE sliding=1", [soon])
+        .unwrap();
+    let response = raw(&server, "/api/auth/me", Some(&session)).await;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(cookies(&response)[0].starts_with(&format!(
+        "{session}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000"
+    )));
+    let expires: i64 = server
+        .db
+        .lock()
+        .unwrap()
+        .query_row("SELECT expires_at FROM sessions WHERE sliding=1", [], |r| {
+            r.get(0)
+        })
+        .unwrap();
+    assert!(expires > chrono::Utc::now().timestamp() + 364 * 86400);
+    // Without OIDC configured the endpoints do not exist.
+    assert_eq!(
+        raw(&server, "/api/auth/oidc/login", None).await.status(),
+        StatusCode::NOT_FOUND
+    );
 }

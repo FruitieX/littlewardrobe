@@ -59,7 +59,7 @@ impl Database {
             [],
             |row| row.get(0),
         )?;
-        if version > 8 {
+        if version > 9 {
             return Err(ApiError::internal(
                 "This database was created by a newer Little Wardrobe version. Restore a compatible backup before downgrading.",
             ));
@@ -104,12 +104,18 @@ impl Database {
             conn.execute_batch(include_str!("../migrations/008_quick_add.sql"))?;
             conn.execute_batch("COMMIT")?;
         }
+        if version < 9 {
+            conn.execute_batch("BEGIN IMMEDIATE")?;
+            conn.execute_batch(include_str!("../migrations/009_oidc.sql"))?;
+            conn.execute_batch("COMMIT")?;
+        }
         conn.execute(
             "DELETE FROM companion_jobs WHERE deadline < unixepoch()",
             [],
         )?;
         conn.execute("DELETE FROM sessions WHERE expires_at < unixepoch()", [])?;
         conn.execute("DELETE FROM invitations WHERE expires_at < unixepoch()", [])?;
+        conn.execute("DELETE FROM oidc_logins WHERE expires_at < unixepoch()", [])?;
         conn.execute(
             "DELETE FROM ai_proposals WHERE created_at < unixepoch()-86400",
             [],

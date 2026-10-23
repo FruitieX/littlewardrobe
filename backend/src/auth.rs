@@ -88,6 +88,31 @@ pub struct Actor {
     pub user: Member,
     pub household_id: String,
     pub session_hash: String,
+    pub sliding: bool,
+}
+/// Password sign-ins last 30 days; passkey (OIDC) sign-ins slide for a year so
+/// a device in regular use never has to sign in again.
+pub const SESSION_SECONDS: i64 = 30 * 86400;
+pub const SLIDING_SESSION_SECONDS: i64 = 365 * 86400;
+pub const SESSION_COOKIE: &str = "littlewardrobe_session";
+fn session_token(headers: &HeaderMap) -> Option<&str> {
+    headers
+        .get_all("cookie")
+        .iter()
+        .filter_map(|value| value.to_str().ok())
+        .flat_map(|cookies| cookies.split(';'))
+        .map(str::trim)
+        .find_map(|cookie| cookie.strip_prefix("littlewardrobe_session="))
+}
+pub fn session_cookie(server: &Server, raw: &str, max_age: i64) -> String {
+    format!(
+        "{SESSION_COOKIE}={raw}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}{}",
+        if server.config.secure_cookie {
+            "; Secure"
+        } else {
+            ""
+        }
+    )
 }
 impl Actor {
     pub fn owner(&self) -> Result<()> {
@@ -99,21 +124,22 @@ impl Actor {
     }
 }
 pub fn authenticate(server: &Server, headers: &HeaderMap) -> Result<Actor> {
-    let session = headers
-        .get("cookie")
-        .and_then(|value| value.to_str().ok())
-        .and_then(|cookies| {
-            cookies
-                .split(';')
-                .map(str::trim)
-                .find_map(|cookie| cookie.strip_prefix("littlewardrobe_session="))
-        })
-        .ok_or_else(ApiError::unauthorized)?;
+    let session = session_token(headers).ok_or_else(ApiError::unauthorized)?;
     if session.len() != 64 {
         return Err(ApiError::unauthorized());
     }
     let session_hash = digest(session);
-    server.db.lock()?.query_row("SELECT u.id,u.name,u.email,u.role,u.household_id FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=?1 AND s.expires_at>?2", params![session_hash, Utc::now().timestamp()], |row| Ok(Actor { user: Member { id: row.get(0)?, name: row.get(1)?, email: row.get(2)?, role: row.get(3)? }, household_id: row.get(4)?, session_hash: session_hash.clone() })).optional()?.ok_or_else(ApiError::unauthorized)
+    let now = Utc::now().timestamp();
+    let conn = server.db.lock()?;
+    let (actor, expires_at) = conn.query_row("SELECT u.id,u.name,u.email,u.role,u.household_id,s.sliding,s.expires_at FROM sessions s JOIN users u ON u.id=s.user_id WHERE s.token_hash=?1 AND s.expires_at>?2", params![session_hash, now], |row| Ok((Actor { user: Member { id: row.get(0)?, name: row.get(1)?, email: row.get(2)?, role: row.get(3)? }, household_id: row.get(4)?, session_hash: session_hash.clone(), sliding: row.get(5)? }, row.get::<_, i64>(6)?))).optional()?.ok_or_else(ApiError::unauthorized)?;
+    // Extend sliding sessions at most once a day to keep reads cheap.
+    if actor.sliding && expires_at < now + SLIDING_SESSION_SECONDS - 86400 {
+        conn.execute(
+            "UPDATE sessions SET expires_at=?1 WHERE token_hash=?2",
+            params![now + SLIDING_SESSION_SECONDS, session_hash],
+        )?;
+    }
+    Ok(actor)
 }
 pub fn session_info(server: &Server, actor: &Actor) -> Result<SessionInfo> {
     let conn = server.db.lock()?;
@@ -162,31 +188,34 @@ pub struct AuthResponse {
     pub session: SessionInfo,
     pub recovery_code: Option<String>,
 }
+/// Stores a new session and returns its Set-Cookie value.
+pub fn create_session(server: &Server, user_id: &str, sliding: bool) -> Result<(String, String)> {
+    let raw = token();
+    let hash = digest(&raw);
+    let now = Utc::now().timestamp();
+    let lifetime = if sliding {
+        SLIDING_SESSION_SECONDS
+    } else {
+        SESSION_SECONDS
+    };
+    {
+        let conn = server.db.lock()?;
+        conn.execute("DELETE FROM sessions WHERE expires_at<=?1", [now])?;
+        conn.execute(
+            "INSERT INTO sessions(token_hash,user_id,expires_at,created_at,sliding) VALUES(?1,?2,?3,?4,?5)",
+            params![hash, user_id, now + lifetime, now, sliding],
+        )?;
+        conn.execute("DELETE FROM sessions WHERE user_id=?1 AND token_hash NOT IN (SELECT token_hash FROM sessions WHERE user_id=?1 ORDER BY created_at DESC LIMIT 10)", [user_id])?;
+    }
+    let cookie = session_cookie(server, &raw, lifetime);
+    Ok((raw, cookie))
+}
 fn signed_in(
     server: &Server,
     user_id: &str,
     recovery_code: Option<String>,
 ) -> Result<(HeaderMap, Json<AuthResponse>)> {
-    let raw = token();
-    let hash = digest(&raw);
-    let now = Utc::now().timestamp();
-    {
-        let conn = server.db.lock()?;
-        conn.execute("DELETE FROM sessions WHERE expires_at<=?1", [now])?;
-        conn.execute(
-            "INSERT INTO sessions(token_hash,user_id,expires_at,created_at) VALUES(?1,?2,?3,?4)",
-            params![hash, user_id, now + 30 * 86400, now],
-        )?;
-        conn.execute("DELETE FROM sessions WHERE user_id=?1 AND token_hash NOT IN (SELECT token_hash FROM sessions WHERE user_id=?1 ORDER BY created_at DESC LIMIT 10)", [user_id])?;
-    }
-    let cookie = format!(
-        "littlewardrobe_session={raw}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000{}",
-        if server.config.secure_cookie {
-            "; Secure"
-        } else {
-            ""
-        }
-    );
+    let (raw, cookie) = create_session(server, user_id, false)?;
     let mut headers = HeaderMap::new();
     headers.insert(SET_COOKIE, cookie.parse().map_err(ApiError::internal)?);
     let actor = authenticate(
@@ -212,11 +241,29 @@ pub async fn status(State(server): State<Server>) -> Result<Json<Value>> {
         .db
         .lock()?
         .query_row("SELECT COUNT(*) FROM users", [], |row| row.get(0))?;
-    Ok(Json(json!({"setupRequired": count == 0})))
+    Ok(Json(
+        json!({"setupRequired": count == 0, "oidc": server.config.oidc.is_some()}),
+    ))
 }
-pub async fn me(State(server): State<Server>, headers: HeaderMap) -> Result<Json<SessionInfo>> {
+pub async fn me(
+    State(server): State<Server>,
+    headers: HeaderMap,
+) -> Result<(HeaderMap, Json<SessionInfo>)> {
     let actor = authenticate(&server, &headers)?;
-    Ok(Json(session_info(&server, &actor)?))
+    let mut response = HeaderMap::new();
+    // The app asks for /me whenever it opens, so this keeps the browser's copy
+    // of a sliding session cookie as fresh as the server's.
+    if actor.sliding
+        && let Some(raw) = session_token(&headers)
+    {
+        response.insert(
+            SET_COOKIE,
+            session_cookie(&server, raw, SLIDING_SESSION_SECONDS)
+                .parse()
+                .map_err(ApiError::internal)?,
+        );
+    }
+    Ok((response, Json(session_info(&server, &actor)?)))
 }
 
 #[derive(Deserialize)]

@@ -1,16 +1,44 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, KeyRound, LoaderCircle } from 'lucide-react'
+import { ArrowRight, Fingerprint, KeyRound, LoaderCircle } from 'lucide-react'
 import { WardrobeMark } from './WardrobeIdentity'
 import type { SessionInfo } from '../lib/api/SessionInfo'
 import { api, post } from '../lib/http'
 
+const passwordPreference = 'littlewardrobe:sign-in-with-password'
+const oidcErrors: Record<string, string> = {
+  not_allowed: 'This passkey account does not have access to Little Wardrobe.',
+  no_account:
+    'Your passkey is not linked to a Little Wardrobe account yet. Sign in with your email and password, or ask the household owner.',
+  expired: 'Signing in took too long. Please try again.',
+  unavailable:
+    'The passkey service cannot be reached right now. Try again, or sign in with your password.',
+  failed: 'Passkey sign-in did not work. Please try again.',
+}
+function prefersPassword() {
+  try {
+    return localStorage.getItem(passwordPreference) === '1'
+  } catch {
+    return false
+  }
+}
+function rememberPassword(value: boolean) {
+  try {
+    if (value) localStorage.setItem(passwordPreference, '1')
+    else localStorage.removeItem(passwordPreference)
+  } catch {
+    /* Only a convenience. */
+  }
+}
+
 export function AuthScreen({
   setupRequired,
+  oidc = false,
   error,
   retry,
   onSignedIn,
 }: {
   setupRequired: boolean
+  oidc?: boolean
   error: string
   retry: () => void
   onSignedIn: (session: SessionInfo, recoveryCode?: string | null) => void
@@ -28,6 +56,23 @@ export function AuthScreen({
   const [samples] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  // With passkey sign-in configured, lead with it; a device that last used a
+  // password goes straight to the password form.
+  const [usePassword, setUsePassword] = useState(prefersPassword)
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    const failure = params.get('oidcError')
+    if (!failure) return
+    setMessage(oidcErrors[failure] ?? oidcErrors.failed)
+    params.delete('oidcError')
+    const query = params.toString()
+    history.replaceState(
+      null,
+      '',
+      location.pathname + (query ? `?${query}` : ''),
+    )
+  }, [])
+  const passkey = oidc && mode === 'login' && !usePassword
   useEffect(() => {
     const token = new URLSearchParams(location.search).get('invite')
     if (!token) {
@@ -79,173 +124,226 @@ export function AuthScreen({
                 ? 'Use the recovery code you saved when creating your account.'
                 : 'Every size, every season, every little adventure.'}
         </p>
-        <form
-          className="editor-form"
-          onSubmit={async (event) => {
-            event.preventDefault()
-            setBusy(true)
-            setMessage('')
-            try {
-              const body =
-                mode === 'setup'
-                  ? {
-                      setupToken,
-                      email,
-                      name,
-                      password,
-                      householdName: household,
-                      timeZone:
-                        Intl.DateTimeFormat().resolvedOptions().timeZone,
-                      samples,
-                    }
-                  : mode === 'join'
-                    ? { token: invite, email, name, password }
-                    : mode === 'recover'
-                      ? {
-                          email,
-                          recoveryCode: recoveryCode.trim(),
-                          newPassword: password,
-                        }
-                      : { email, password }
-              const result = await post<{
-                session: SessionInfo
-                recoveryCode: string | null
-              }>(`/auth/${mode === 'recover' ? 'recover' : mode}`, body)
-              if (mode === 'join')
-                history.replaceState(null, '', location.pathname)
-              onSignedIn(result.session, result.recoveryCode)
-            } catch (error) {
-              setMessage(
-                error instanceof Error ? error.message : 'Please try again.',
-              )
-            } finally {
-              setBusy(false)
-            }
-          }}
-        >
-          {mode === 'setup' && (
-            <label>
-              Setup token
-              <input
-                aria-label="Setup token"
-                value={setupToken}
-                onChange={(event) => setSetupToken(event.target.value)}
-                required
-                autoComplete="off"
-                placeholder="From your server’s setup-token file or secret"
-              />
-              <small>
-                This protects first-use setup. Find it in the server data
-                directory or your deployment secret.
-              </small>
-            </label>
-          )}
-          {(mode === 'setup' || mode === 'join') && (
-            <label>
-              Your name
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                required
-                autoComplete="name"
-                maxLength={80}
-                placeholder="Your name"
-              />
-            </label>
-          )}
-          <label>
-            Email
-            <input
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              required
-              autoComplete="username"
-              readOnly={mode === 'join'}
-              maxLength={254}
-              placeholder="you@example.com"
-            />
-          </label>
-          {mode === 'recover' && (
-            <label>
-              Recovery code
-              <textarea
-                value={recoveryCode}
-                onChange={(event) => setRecoveryCode(event.target.value)}
-                required
-                autoComplete="off"
-                rows={2}
-              />
-            </label>
-          )}
-          <label>
-            {mode === 'recover' ? 'New password' : 'Password'}
-            <input
-              type="password"
-              aria-label={mode === 'recover' ? 'New password' : 'Password'}
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              required
-              minLength={mode === 'login' ? undefined : 12}
-              maxLength={256}
-              autoComplete={
-                mode === 'login' ? 'current-password' : 'new-password'
-              }
-            />
-            {mode !== 'login' && (
-              <small>
-                At least 12 characters. A memorable passphrase works well.
-              </small>
+        {passkey ? (
+          <div className="editor-form">
+            {(message || error) && (
+              <div className="form-error" role="alert">
+                {message || error}
+                {error && (
+                  <button type="button" className="text-button" onClick={retry}>
+                    Try connecting again
+                  </button>
+                )}
+              </div>
             )}
-          </label>
-          {mode === 'setup' && (
-            <>
+            <a
+              className="primary-button"
+              href="/api/auth/oidc/login"
+              onClick={() => setBusy(true)}
+            >
+              {busy ? (
+                <LoaderCircle size={18} className="spin" />
+              ) : (
+                <Fingerprint size={18} />
+              )}
+              Sign in with passkey
+            </a>
+          </div>
+        ) : (
+          <form
+            className="editor-form"
+            onSubmit={async (event) => {
+              event.preventDefault()
+              setBusy(true)
+              setMessage('')
+              try {
+                const body =
+                  mode === 'setup'
+                    ? {
+                        setupToken,
+                        email,
+                        name,
+                        password,
+                        householdName: household,
+                        timeZone:
+                          Intl.DateTimeFormat().resolvedOptions().timeZone,
+                        samples,
+                      }
+                    : mode === 'join'
+                      ? { token: invite, email, name, password }
+                      : mode === 'recover'
+                        ? {
+                            email,
+                            recoveryCode: recoveryCode.trim(),
+                            newPassword: password,
+                          }
+                        : { email, password }
+                const result = await post<{
+                  session: SessionInfo
+                  recoveryCode: string | null
+                }>(`/auth/${mode === 'recover' ? 'recover' : mode}`, body)
+                if (mode === 'join')
+                  history.replaceState(null, '', location.pathname)
+                if (oidc && mode === 'login') rememberPassword(true)
+                onSignedIn(result.session, result.recoveryCode)
+              } catch (error) {
+                setMessage(
+                  error instanceof Error ? error.message : 'Please try again.',
+                )
+              } finally {
+                setBusy(false)
+              }
+            }}
+          >
+            {mode === 'setup' && (
               <label>
-                Household name
+                Setup token
                 <input
-                  value={household}
-                  onChange={(event) => setHousehold(event.target.value)}
+                  aria-label="Setup token"
+                  value={setupToken}
+                  onChange={(event) => setSetupToken(event.target.value)}
                   required
+                  autoComplete="off"
+                  placeholder="From your server’s setup-token file or secret"
+                />
+                <small>
+                  This protects first-use setup. Find it in the server data
+                  directory or your deployment secret.
+                </small>
+              </label>
+            )}
+            {(mode === 'setup' || mode === 'join') && (
+              <label>
+                Your name
+                <input
+                  value={name}
+                  onChange={(event) => setName(event.target.value)}
+                  required
+                  autoComplete="name"
                   maxLength={80}
+                  placeholder="Your name"
                 />
               </label>
-            </>
-          )}
-          {(message || error) && (
-            <div className="form-error" role="alert">
-              {message || error}
-              {error && (
-                <button type="button" className="text-button" onClick={retry}>
-                  Try connecting again
-                </button>
-              )}
-            </div>
-          )}
-          <button className="primary-button" type="submit" disabled={busy}>
-            {busy ? (
-              <LoaderCircle size={18} className="spin" />
-            ) : (
-              <ArrowRight size={18} />
             )}
-            {busy
-              ? 'Opening your basket…'
-              : mode === 'setup'
-                ? 'Create our household'
-                : mode === 'join'
-                  ? 'Join our household'
-                  : mode === 'recover'
-                    ? 'Reset password and sign in'
-                    : 'Sign in'}
-          </button>
-        </form>
-        {mode === 'login' ? (
+            <label>
+              Email
+              <input
+                type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                required
+                autoComplete="username"
+                readOnly={mode === 'join'}
+                maxLength={254}
+                placeholder="you@example.com"
+              />
+            </label>
+            {mode === 'recover' && (
+              <label>
+                Recovery code
+                <textarea
+                  value={recoveryCode}
+                  onChange={(event) => setRecoveryCode(event.target.value)}
+                  required
+                  autoComplete="off"
+                  rows={2}
+                />
+              </label>
+            )}
+            <label>
+              {mode === 'recover' ? 'New password' : 'Password'}
+              <input
+                type="password"
+                aria-label={mode === 'recover' ? 'New password' : 'Password'}
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                required
+                minLength={mode === 'login' ? undefined : 12}
+                maxLength={256}
+                autoComplete={
+                  mode === 'login' ? 'current-password' : 'new-password'
+                }
+              />
+              {mode !== 'login' && (
+                <small>
+                  At least 12 characters. A memorable passphrase works well.
+                </small>
+              )}
+            </label>
+            {mode === 'setup' && (
+              <>
+                <label>
+                  Household name
+                  <input
+                    value={household}
+                    onChange={(event) => setHousehold(event.target.value)}
+                    required
+                    maxLength={80}
+                  />
+                </label>
+              </>
+            )}
+            {(message || error) && (
+              <div className="form-error" role="alert">
+                {message || error}
+                {error && (
+                  <button type="button" className="text-button" onClick={retry}>
+                    Try connecting again
+                  </button>
+                )}
+              </div>
+            )}
+            <button className="primary-button" type="submit" disabled={busy}>
+              {busy ? (
+                <LoaderCircle size={18} className="spin" />
+              ) : (
+                <ArrowRight size={18} />
+              )}
+              {busy
+                ? 'Opening your basket…'
+                : mode === 'setup'
+                  ? 'Create our household'
+                  : mode === 'join'
+                    ? 'Join our household'
+                    : mode === 'recover'
+                      ? 'Reset password and sign in'
+                      : 'Sign in'}
+            </button>
+          </form>
+        )}
+        {passkey ? (
           <button
             className="text-button auth-alternate"
-            onClick={() => setMode('recover')}
+            onClick={() => {
+              setMessage('')
+              setUsePassword(true)
+            }}
           >
-            <KeyRound size={15} />
-            Forgot your password?
+            Sign in with email and password
           </button>
+        ) : mode === 'login' ? (
+          <div className="auth-alternates">
+            {oidc && (
+              <button
+                className="text-button auth-alternate"
+                onClick={() => {
+                  setMessage('')
+                  rememberPassword(false)
+                  setUsePassword(false)
+                }}
+              >
+                <Fingerprint size={15} />
+                Use a passkey instead
+              </button>
+            )}
+            <button
+              className="text-button auth-alternate"
+              onClick={() => setMode('recover')}
+            >
+              <KeyRound size={15} />
+              Forgot your password?
+            </button>
+          </div>
         ) : (
           mode !== 'setup' && (
             <button className="text-button auth-alternate" onClick={login}>

@@ -33,6 +33,7 @@ jobs:
       - run: nix develop --command npm run format:check
       - run: nix develop --command npm run build
       - run: nix develop --command npm run test:production
+      - run: nix develop --command npm run test:oidc
       - run: nix build .#container --out-link result-container
       - name: Verify the packaged container
         run: |

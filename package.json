@@ -14,6 +14,7 @@
     "mockups": "node scripts/verify-production.mjs",
     "test:production": "node scripts/verify-production.mjs",
     "test:container": "node scripts/verify-container.mjs",
+    "test:oidc": "node scripts/verify-oidc.mjs",
     "icons": "node scripts/render-icons.mjs"
   },
   "dependencies": {

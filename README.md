@@ -45,6 +45,7 @@ nix develop --command python3 scripts/hermes-companion.check.py
 nix develop --command npm run format:check
 nix develop --command npm run build
 nix develop --command npm run test:production
+nix develop --command npm run test:oidc
 ```
 
 The production browser suite starts isolated backend/provider servers. It exercises two adult sessions, mobile family/storage setup, clothing/tag photos, AI review, reference-image edits, hand-me-downs, offline reload/reconnect, concurrent editor conflicts, sale approval/export/edits, actual sales, bundles, backups and responsive screens. Rust checks cover household isolation, photo provenance, stale writes, persistence, approvals, provider requests and inherited auth/sync behavior.

@@ -15,6 +15,12 @@ Persist `/data`; temporary files use `/tmp`. Set `LITTLEWARDROBE_ORIGIN=https://
 | `LITTLEWARDROBE_SETUP_TOKEN`         | Random first-owner token, at least 16 characters; generated privately on first start if absent |
 | `LITTLEWARDROBE_SECRET_KEY`          | Exactly 64 hexadecimal characters; encryption key for provider credentials                     |
 | `LITTLEWARDROBE_SQLITE_JOURNAL_MODE` | `WAL` for local/block storage, `DELETE` for an appropriately configured NFS volume             |
+| `LITTLEWARDROBE_OIDC_ISSUER`         | Optional passkey sign-in: OpenID Connect issuer, e.g. `https://id.fruitiex.org`                |
+| `LITTLEWARDROBE_OIDC_CLIENT_ID`      | Client id registered at the provider                                                           |
+| `LITTLEWARDROBE_OIDC_CLIENT_SECRET`  | Client secret; keep it in the SOPS secret                                                      |
+| `LITTLEWARDROBE_OIDC_REDIRECT_URL`   | Defaults to `$LITTLEWARDROBE_ORIGIN/api/auth/oidc/callback`; register it at the provider       |
+| `LITTLEWARDROBE_OIDC_ALLOWED_GROUPS` | Comma-separated groups; sign-in requires one of them                                           |
+| `LITTLEWARDROBE_OIDC_USER_MAP`       | `provideruser:local@email,...` links existing password accounts on their first passkey sign-in |
 
 Use setup and encryption secrets unique to this installation. Preserve the encryption key to decrypt the saved AI credential. Changing it is not a credential rotation strategy.
 
@@ -37,6 +43,8 @@ Copy `secret.sops.yaml.example` to a private file, replace both values, encrypt 
 ## Accounts and operation
 
 Retrieve the first-owner token through trusted server access, create the owner, save the recovery code and invite the second adult. Invitations expire after seven days. Each account has a separate session and can sign out, edit its profile and manage its password. The owner manages invitations, household name, AI configuration and backups. Recovery rotates credentials and signs out old sessions.
+
+Passkey sign-in through an OpenID Connect provider (Pocket ID) is optional and enabled only when the issuer, client id and client secret are all set. The sign-in screen then leads with “Sign in with passkey” and keeps email/password sign-in as a quieter fallback; a device that signs in with a password goes straight to the password form next time. Identities are keyed by issuer and subject. A first sign-in uses an existing link, then the user map; anyone else in an allowed group becomes a password-less member of the household (only when exactly one household exists). An account linked to one provider identity is never linked to a second. Passkey sessions last 365 days and slide while in use; password sessions keep their 30-day lifetime, and companion bearer tokens are unaffected. `npm run test:oidc` runs the flow against a mock provider in the production build.
 
 `/api/health` checks the process and `/api/ready` checks the database. Preserve long-lived SSE responses through the proxy; the HTTPRoute has no request timeout. Reconnection refreshes authoritative state. Conflicting changes stay in the local outbox for explicit retry/discard through the connection controls.
 
