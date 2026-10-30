@@ -12,14 +12,18 @@
       };
       frontend = pkgs.buildNpmPackage {
         pname = "littlewardrobe-ui"; version = "0.1.0"; src = source;
-        nodejs = pkgs.nodejs_22;
-        npmDepsHash = "sha256-wKUpg3gg9LcAoQnVPUgIQGSWgzP+pjurj32sp2jnVQw=";
+        nodejs = pkgs.nodejs_26;
+        # Read dependencies from package-lock.json so lockfile-only updates need no hash bump.
+        npmDeps = pkgs.importNpmLock { npmRoot = source; };
+        npmConfigHook = pkgs.importNpmLock.npmConfigHook;
         installPhase = ''mkdir -p $out/share/littlewardrobe; cp -r dist/client/. $out/share/littlewardrobe/'';
       };
       backend = pkgs.rustPlatform.buildRustPackage {
         pname = "littlewardrobe-api"; version = "0.1.0";
         src = pkgs.lib.cleanSourceWith {src = ./backend; filter = path: type: !(builtins.elem (baseNameOf path) ["target" "bindings"]);};
         cargoLock.lockFile = ./backend/Cargo.lock;
+        # reqwest verifies TLS with the platform store, so tests need CA certificates.
+        nativeCheckInputs = [ pkgs.cacert ];
       };
     in {inherit pkgs source frontend backend;};
   in {
@@ -42,7 +46,7 @@
     });
     devShells = eachSystem (system: let pkgs = (forSystem system).pkgs; in {
       default = pkgs.mkShell {
-        packages = with pkgs; [ nodejs_22 python3 cargo rustc rustfmt clippy pkg-config gcc git kustomize sops ]
+        packages = with pkgs; [ nodejs_26 python3 cargo rustc rustfmt clippy pkg-config gcc git kustomize sops ]
           ++ lib.optionals stdenv.hostPlatform.isLinux [ chromium ];
         shellHook = ''
           ${nixpkgs.lib.optionalString (nixpkgs.lib.hasSuffix "linux" system) "export PLAYWRIGHT_CHROMIUM_EXECUTABLE=${pkgs.chromium}/bin/chromium"}
