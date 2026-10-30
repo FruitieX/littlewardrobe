@@ -1,3 +1,10 @@
+item-style-reference.png arranges six Twemoji graphics (red apple, lemon,
+carrot, broccoli, glass of milk, bread). Twemoji: Copyright 2019 Twitter, Inc
+and other contributors, https://github.com/jdecked/twemoji (originally
+https://github.com/twitter/twemoji). The graphics are licensed under the
+Creative Commons Attribution 4.0 International license below
+(https://creativecommons.org/licenses/by/4.0/).
+
 Attribution 4.0 International
 
 =======================================================================

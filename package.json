@@ -2,6 +2,7 @@
   "name": "littlewardrobe",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "format": "prettier --write src scripts docs README.md AGENTS.md vite.config.ts tsconfig.json package.json .prettierrc.json",

@@ -83,3 +83,7 @@ nix develop --command npm run test:production
 ## Credits
 
 DM Sans and Fraunces are bundled under the SIL Open Font License (see `public/fonts/`). A Twemoji graphic used by an unused server feature is licensed CC BY 4.0, with the notice in `backend/assets/LICENSE-GRAPHICS.txt`. The app icon is `public/icon.svg`.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
