@@ -1,39 +1,71 @@
-# Little Wardrobe
+<p align="center">
+  <img src="public/icon.svg" width="96" alt="">
+</p>
 
-A private, shared family wardrobe. Add a garment photo and optional tag photo, review AI-suggested details, then track rotation, storage, hand-me-downs and resale. The interface is in English and sale listings are in Finnish.
+<h1 align="center">Little Wardrobe</h1>
 
-Children, birthdays, clothing/shoe sizes and storage locations are configurable. Search by child, lifecycle, category, size, season and location. Preserve purchase history, condition, defects, private notes, sold/donated items and keepsakes. Numeric size comparisons suggest pieces worth checking without pretending to know their actual fit.
+A shared notebook for a family's kids' clothes: what each child wears now, what's packed away for a younger sibling, and what's ready to sell. It's self-hosted and meant for the parents of one household, each on their own phone.
 
-The sale desk supports single items and bundles, AI or manual drafts, asking prices, approval, original-photo exports, clipboard and supported file sharing, external listing links and actual sale amounts. Changes reset approval. Selling an item flags overlapping listings for removal. AI prices are unverified estimates. Direct posting is unavailable for ordinary family accounts through the verified official interfaces; see [marketplace feasibility](docs/MARKETPLACES.md). Vinted uses original photos only.
+<p align="center">
+  <img src="docs/screenshots/mobile.png" alt="Wardrobe, family and sell screens on a phone">
+</p>
 
-The family starts empty. [Screenshots](mockups/README.md) use isolated test data and a controlled provider.
+![The wardrobe on desktop](docs/screenshots/wardrobe-desktop.png)
 
-## Run locally
+_Screenshots use a throwaway household with illustrated mock clothes._
+
+## What it does
+
+Take a photo of a piece of clothing and, optionally, its size tag. If you've connected an AI provider, it suggests the name, category, size, colour, material, season and condition, and shows which fields it wasn't sure about. Nothing is saved until you've looked it over. Quick add lets you photograph a pile of clothes in a row and review them later while the server works through them.
+
+Each piece belongs to a child and has a status: in rotation, saved for later, ready to sell, reserved, sold, donated or kept. You can mark who it should go to next, note where it's stored (the attic box, under the bed), and record purchase details, defects and private notes. Children have a birthday and current clothing and shoe sizes, and the app points out stored pieces that might fit now. Search and filters cover child, status, category, size, season and location.
+
+The sell tab turns one piece or a bundle into a Finnish listing for Tori or Vinted, written by the AI or by hand. You set the price (AI prices are labelled as rough estimates), approve the draft, then copy the text and download or share the photos to post it yourself. The app doesn't post to marketplaces; [docs/MARKETPLACES.md](docs/MARKETPLACES.md) explains why. Vinted exports only ever use the original photos, never AI-edited ones. When something sells, other listings that include it are flagged for removal.
+
+Both parents see changes live, and the app keeps working offline as an installed PWA, syncing queued edits when the connection comes back. The interface is in English.
+
+## Running it locally
+
+You need Nix with flakes. The dev shell has Node, Rust, Python and Chromium.
 
 ```sh
 nix develop
-command -v node npm cargo cc python3
 npm ci
 npm run dev
-# In another Nix shell:
+# in a second `nix develop` shell
 cargo run --manifest-path backend/Cargo.toml
 ```
 
-Open `http://localhost:3101`. The backend listens at `127.0.0.1:3002`. Find the first-owner token in `data/setup-token`, create your account, save the recovery code and invite your wife through Settings.
+Open http://localhost:3101 (the backend listens on 127.0.0.1:3002). The first start writes a setup token to `data/setup-token`; use it to create the first account, then invite the other parent from Settings. The wardrobe starts empty.
 
-Connect an OpenAI-compatible vision model or pair a personal Hermes companion in Settings. Credentials remain server-side or on the agent machine; uploaded photos remain private to the household. An optional reference-image model enables reviewed background edits. See [AI setup](docs/AI.md).
+AI is optional. In Settings you can point it at any OpenAI-compatible endpoint with a vision model, or pair a personal Hermes companion. An image model with `/images/edits` support enables optional background clean-ups of photos. See [docs/AI.md](docs/AI.md).
 
-## Build and self-host
+## Configuration
+
+- `LITTLEWARDROBE_ORIGIN`: the exact URL people open, e.g. `https://wardrobe.example.com`.
+- `LITTLEWARDROBE_DATA_DIR`: where the SQLite database and photos are stored (`/data` in the container).
+- `LITTLEWARDROBE_SETUP_TOKEN` and `LITTLEWARDROBE_SECRET_KEY`: the first-owner token and the 64-character hex key that encrypts the AI credentials. Both are generated on first start if unset; keep the key.
+- `LITTLEWARDROBE_SQLITE_JOURNAL_MODE=DELETE` if the data lives on NFS.
+- `LITTLEWARDROBE_OIDC_*` for optional passkey sign-in through an OpenID Connect provider.
+
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) has the full list.
+
+## Deploying
+
+CI publishes `ghcr.io/fruitiex/littlewardrobe:main`. It's a single non-root container serving the app and API on port 8080. Mount persistent storage at `/data`, run one replica, and put it behind your own HTTPS reverse proxy with `LITTLEWARDROBE_ORIGIN` set to match. HTTPS is needed for the camera, clipboard and installing the PWA. It holds photos of your children's clothes, so I'd keep it on a private network or VPN.
+
+To build the image yourself:
 
 ```sh
 nix build .#container --out-link result-container
 docker load -i result-container
-nix develop --command npm run test:container
 ```
 
-The unprivileged container serves frontend and API on port 8080. Persist `/data`, configure the actual HTTPS origin and use the supplied [private ingress](deploy/kubernetes/apps/littlewardrobe/ingress.yaml) on the private gateway. See [deployment and backups](docs/DEPLOYMENT.md). The live cluster is not changed by building this repo.
+Example Kubernetes manifests (private gateway only) are in [deploy/kubernetes](deploy/kubernetes). Backups, restore and OIDC setup are covered in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
-## Verify
+## Development
+
+TanStack Start/Router, React, TypeScript and Tailwind on the frontend; Rust with Axum, Tokio and SQLite on the backend, with API types generated by ts-rs. The checks CI runs:
 
 ```sh
 nix develop --command cargo fmt --manifest-path backend/Cargo.toml -- --check
@@ -41,15 +73,13 @@ nix develop --command cargo clippy --manifest-path backend/Cargo.toml --all-targ
 nix develop --command cargo test --manifest-path backend/Cargo.toml
 nix develop --command npm run typecheck
 nix develop --command npm test
-nix develop --command python3 scripts/hermes-companion.check.py
 nix develop --command npm run format:check
 nix develop --command npm run build
 nix develop --command npm run test:production
-nix develop --command npm run test:oidc
 ```
 
-The production browser suite starts isolated backend/provider servers. It exercises two adult sessions, mobile family/storage setup, clothing/tag photos, AI review, reference-image edits, hand-me-downs, offline reload/reconnect, concurrent editor conflicts, sale approval/export/edits, actual sales, bundles, backups and responsive screens. Rust checks cover household isolation, photo provenance, stale writes, persistence, approvals, provider requests and inherited auth/sync behavior.
+`test:production` runs the production build in headless Chromium against a temporary database and a fake AI provider, with a desktop and a phone session editing the same household. `npm run test:oidc` and `npm run test:container` cover passkey sign-in and the built image. [docs/PLAN.md](docs/PLAN.md) has the requirements and design notes.
 
-TanStack Start/Router, React, TypeScript, Tailwind and Radix; Rust, Tokio, Axum, SQLite, SSE and ts-rs. Authenticated households, private images, encrypted AI credentials, guarded concurrent edits and a persisted offline outbox protect family data. [The plan](docs/PLAN.md) records requirements and progress.
+## Credits
 
-DM Sans and Fraunces include their SIL Open Font License files. The legacy server icon reference comes from Twemoji, with its CC BY 4.0 notice in `backend/assets/LICENSE-GRAPHICS.txt`; that icon feature is not exposed in the clothing interface. App marks are repo-native SVGs.
+DM Sans and Fraunces are bundled under the SIL Open Font License (see `public/fonts/`). A Twemoji graphic used by an unused server feature is licensed CC BY 4.0, with the notice in `backend/assets/LICENSE-GRAPHICS.txt`. The app icon is `public/icon.svg`.

@@ -15,7 +15,7 @@ Persist `/data`; temporary files use `/tmp`. Set `LITTLEWARDROBE_ORIGIN` to your
 | `LITTLEWARDROBE_SETUP_TOKEN`         | Random first-owner token, at least 16 characters; generated privately on first start if absent |
 | `LITTLEWARDROBE_SECRET_KEY`          | Exactly 64 hexadecimal characters; encryption key for provider credentials                     |
 | `LITTLEWARDROBE_SQLITE_JOURNAL_MODE` | `WAL` for local/block storage, `DELETE` for an appropriately configured NFS volume             |
-| `LITTLEWARDROBE_OIDC_ISSUER`         | Optional passkey sign-in: OpenID Connect issuer, e.g. `https://id.fruitiex.org`                |
+| `LITTLEWARDROBE_OIDC_ISSUER`         | Optional passkey sign-in: OpenID Connect issuer, e.g. `https://id.example.com`                 |
 | `LITTLEWARDROBE_OIDC_CLIENT_ID`      | Client id registered at the provider                                                           |
 | `LITTLEWARDROBE_OIDC_CLIENT_SECRET`  | Client secret; keep it in the SOPS secret                                                      |
 | `LITTLEWARDROBE_OIDC_REDIRECT_URL`   | Defaults to `$LITTLEWARDROBE_ORIGIN/api/auth/oidc/callback`; register it at the provider       |
