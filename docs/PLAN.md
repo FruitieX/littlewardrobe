@@ -52,7 +52,7 @@ Reuse authenticated household isolation, first-owner setup token, account recove
 
 Use a project-local locked Nix environment, npm and Cargo lockfiles. Package frontend and backend into a single unprivileged container with persistent data and health checks. Provide a private Gateway API HTTPRoute using the homelab’s private gateway, HTTPS for PWA/camera behavior, a single replica, suitable SQLite storage, and SOPS secret examples. Document installation, provider setup, invitation, backups, recovery and upgrade procedures.
 
-Commit and push completed, checked task changes as authorized by `/home/rasse/AGENTS.md`. Include only changes made for this application.
+Commit and push completed, checked task changes as authorized by the owner's global agent instructions. Include only changes made for this application.
 
 ## Completion checklist
 

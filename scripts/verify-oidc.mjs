@@ -95,7 +95,7 @@ const backend = spawn(
       LITTLEWARDROBE_OIDC_CLIENT_ID: 'littlewardrobe',
       LITTLEWARDROBE_OIDC_CLIENT_SECRET: 'mock-secret',
       LITTLEWARDROBE_OIDC_ALLOWED_GROUPS: 'family',
-      LITTLEWARDROBE_OIDC_USER_MAP: 'rasse:owner@example.test',
+      LITTLEWARDROBE_OIDC_USER_MAP: 'sam:owner@example.test',
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   },
@@ -123,7 +123,7 @@ try {
     body: JSON.stringify({
       setupToken: 'oidc-only-bootstrap-token',
       email: 'owner@example.test',
-      name: 'Owner',
+      name: 'Sam',
       password: 'a sufficiently long password',
       householdName: 'Our family',
       timeZone: 'Europe/Helsinki',
@@ -142,9 +142,9 @@ try {
 
   // The owner's password account is linked through the user map.
   user = {
-    sub: 'sub-rasse',
-    preferred_username: 'rasse',
-    name: 'Rasse',
+    sub: 'sub-sam',
+    preferred_username: 'sam',
+    name: 'Sam',
     groups: ['admins', 'family'],
   }
   const owner = await (await browser.newContext(options)).newPage()
@@ -176,22 +176,26 @@ try {
   )
 
   // The password fallback still works, and the device remembers it.
-  const wife = await (await browser.newContext(options)).newPage()
-  await wife.goto(app)
-  await wife
+  const secondDevice = await (await browser.newContext(options)).newPage()
+  await secondDevice.goto(app)
+  await secondDevice
     .getByRole('button', { name: 'Sign in with email and password' })
     .click()
-  await wife.getByLabel('Email').fill('owner@example.test')
-  await wife.getByLabel('Password').fill('a sufficiently long password')
-  await wife.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await wife
+  await secondDevice.getByLabel('Email').fill('owner@example.test')
+  await secondDevice.getByLabel('Password').fill('a sufficiently long password')
+  await secondDevice
+    .getByRole('button', { name: 'Sign in', exact: true })
+    .click()
+  await secondDevice
     .locator('[data-app-ready="true"]')
     .first()
     .waitFor({ timeout: 30000 })
-  await wife.context().clearCookies()
-  await wife.goto(app)
-  await wife.getByLabel('Password').waitFor()
-  await wife.getByRole('button', { name: 'Use a passkey instead' }).waitFor()
+  await secondDevice.context().clearCookies()
+  await secondDevice.goto(app)
+  await secondDevice.getByLabel('Password').waitFor()
+  await secondDevice
+    .getByRole('button', { name: 'Use a passkey instead' })
+    .waitFor()
   console.log('OIDC sign-in checks passed')
 } catch (error) {
   console.error(logs.join(''))

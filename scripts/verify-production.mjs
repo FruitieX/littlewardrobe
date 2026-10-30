@@ -185,7 +185,7 @@ try {
     permissions: ['clipboard-read', 'clipboard-write'],
     acceptDownloads: true,
   })
-  const wife = await browser.newContext({
+  const partner = await browser.newContext({
     viewport: { width: 390, height: 844 },
     isMobile: true,
     hasTouch: true,
@@ -204,24 +204,24 @@ try {
   await call(owner, '/auth/setup', 'POST', {
     setupToken: token,
     email: 'owner@example.test',
-    name: 'Owner',
+    name: 'Sam',
     password: 'a long browser test password',
     householdName: 'Our family',
     timeZone: 'Europe/Helsinki',
     samples: false,
   })
   const invitation = await call(owner, '/invitations', 'POST', {
-    email: 'wife@example.test',
+    email: 'partner@example.test',
   })
   const invite = new URL(invitation.url).searchParams.get('invite')
-  await call(wife, '/auth/join', 'POST', {
+  await call(partner, '/auth/join', 'POST', {
     token: invite,
-    email: 'wife@example.test',
-    name: 'Wife',
+    email: 'partner@example.test',
+    name: 'Kim',
     password: 'another long browser password',
   })
   const page = await owner.newPage(),
-    mobile = await wife.newPage()
+    mobile = await partner.newPage()
   page.setDefaultTimeout(12000)
   mobile.setDefaultTimeout(12000)
   page.on('pageerror', (e) => errors.push(e.message))
@@ -526,7 +526,7 @@ try {
       await mobile.evaluate(() => !!navigator.serviceWorker.controller),
     'service worker control',
   )
-  await wife.setOffline(true)
+  await partner.setOffline(true)
   await mobile
     .locator('.garment-card')
     .filter({ hasText: 'Striped cotton shirt' })
@@ -541,7 +541,7 @@ try {
     .locator('.garment-card')
     .filter({ hasText: 'Striped shirt · offline edit' })
     .waitFor()
-  await wife.setOffline(false)
+  await partner.setOffline(false)
   await waitFor(
     async () =>
       (await call(owner, '/state')).state.garments[0].name.includes(
@@ -819,7 +819,7 @@ try {
     (job) => job.garmentId === pendingPhoto.id,
   )
   // Repeating the same acceptance after a lost response never adds a duplicate.
-  await call(wife, '/ai/photo-jobs', 'POST', {
+  await call(partner, '/ai/photo-jobs', 'POST', {
     id: queuedJob.id,
     photos: pendingPhoto.photos,
     defaults: {
