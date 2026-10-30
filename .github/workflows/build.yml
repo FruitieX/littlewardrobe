@@ -18,7 +18,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: cachix/install-nix-action@v31
         with:
           extra_nix_config: |
@@ -52,7 +52,7 @@ jobs:
           reference="$(docker inspect --format '{{index .RepoDigests 0}}' ghcr.io/fruitiex/littlewardrobe:${{ github.sha }})"
           [[ "$reference" == ghcr.io/fruitiex/littlewardrobe@sha256:* ]]
           printf 'digest=%s\n' "${reference##*@}" >> "$GITHUB_OUTPUT"
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: browser-results
