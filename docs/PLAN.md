@@ -1,6 +1,6 @@
 # Little Wardrobe product and implementation plan
 
-Build a working family application in `/home/rasse/littlewardrobe` to manage the children’s clothes from purchase through daily use, storage, hand-me-downs and resale. The user requested a complete application with AI assistance for photo intake and sale preparation. This document preserves the agreed scope, practical constraints, implementation decisions and progress so work can continue across sessions.
+Build a working family application to manage the children’s clothes from purchase through daily use, storage, hand-me-downs and resale. The user requested a complete application with AI assistance for photo intake and sale preparation. This document preserves the agreed scope, practical constraints, implementation decisions and progress so work can continue across sessions.
 
 ## Agreed requirements
 
@@ -9,7 +9,7 @@ Build a working family application in `/home/rasse/littlewardrobe` to manage the
 - English interface and Finnish sale listings.
 - Self-host with configurable AI connections, including an OpenAI-compatible endpoint and the personal Hermes companion.
 - Full scope: inventory, photo intake, configurable children, active rotation, storage, hand-me-downs, sale drafts, bundles and posting automation where feasible.
-- Prepare a private ingress so the application is accessible only through the family’s LAN or VPN. Do not add a public gateway. Checked updates to the existing private homelab instance are authorized; preserve the private ingress.
+- Prepare a private ingress so the application is reachable only from the family’s private network. Do not add a public gateway. Checked updates to the existing private homelab instance are authorized; preserve the private ingress.
 - Save this plan and make its completion the active goal, as requested by the user.
 
 The working name is **Little Wardrobe**. It is an implementation default, not a user-approved brand or a claim of name availability. Real child names, birthdays, sizes and inventory start empty and are configured through the app.
@@ -50,9 +50,9 @@ Use TanStack Start/Router, React, TypeScript and accessible Radix dialogs for a 
 
 Reuse authenticated household isolation, first-owner setup token, account recovery, expiring invitations, secure same-origin cookie sessions, encrypted AI credentials, private uploaded images, atomic operations, idempotency, guarded concurrent edits, SSE refresh and persisted offline changes. Keep API keys and companion credentials on the appropriate server/agent machine. Test clothing-specific input validation, household image ownership and malformed AI output. Do not assume that previously tested shopping behavior proves the clothing features work.
 
-Use a project-local locked Nix environment, npm and Cargo lockfiles. Package frontend and backend into a single unprivileged container with persistent data and health checks. Provide a private Gateway API HTTPRoute using the homelab’s private gateway, HTTPS for PWA/camera behavior, a single replica, suitable SQLite storage, and SOPS secret examples. Document installation, provider setup, invitation, backups, recovery and upgrade procedures. Checked updates to the existing private homelab instance are authorized as of 2026-10-13.
+Use a project-local locked Nix environment, npm and Cargo lockfiles. Package frontend and backend into a single unprivileged container with persistent data and health checks. Provide a private Gateway API HTTPRoute using the homelab’s private gateway, HTTPS for PWA/camera behavior, a single replica, suitable SQLite storage, and SOPS secret examples. Document installation, provider setup, invitation, backups, recovery and upgrade procedures.
 
-Commit and push completed, checked task changes as authorized by `/home/rasse/AGENTS.md`. A new private repository may be created if needed to fulfill that standing push instruction. Include only changes made for this application.
+Commit and push completed, checked task changes as authorized by `/home/rasse/AGENTS.md`. Include only changes made for this application.
 
 ## Completion checklist
 
@@ -78,21 +78,9 @@ Production browser checks have passed with two adult accounts and independent de
 
 Delivery checks passed: 60 Rust tests, Clippy for all targets with warnings denied, Rust formatting, 28 frontend tests, TypeScript, five Python companion protocol tests, Prettier, the frontend/PWA build and private Kubernetes template rendering. Clothing tests cover private inline photos, reviewed drafts, offline companion errors, malformed output and edited-photo provenance. The final Nix container passed the complete production browser suite as UID 10001 with a read-only root and isolated temporary data. The image is available locally as `ghcr.io/fruitiex/littlewardrobe:main` and through the `result-container` build artifact.
 
-The completed application is delivered in the private repository [FruitieX/littlewardrobe](https://github.com/FruitieX/littlewardrobe). The validation/publishing workflow builds and verifies the container before publishing to GHCR; it has no live deployment job. All accepted completion milestones are implemented and checked. External provider configuration, live deployment and any future business-only publisher are documented operational steps outside this delivery.
+The completed application is delivered in the repository [FruitieX/littlewardrobe](https://github.com/FruitieX/littlewardrobe). The validation/publishing workflow builds and verifies the container before publishing to GHCR; it has no live deployment job. All accepted completion milestones are implemented and checked. External provider configuration, live deployment and any future business-only publisher are documented operational steps outside this delivery.
 
-Primary marketplace documentation establishes business-only integration routes, not an available personal-account publisher. The accepted fallback is implemented and documented in `docs/MARKETPLACES.md`. Provider credentials and a live personal companion remain external configuration. Private deployment and recovery instructions are in `docs/DEPLOYMENT.md`; templates do not alter the live cluster. At the initial implementation delivery, no marketplace publication or live deployment had occurred. The later authorized homelab deployment is recorded below.
-
-## Private homelab deployment — 2026-10-02
-
-The user explicitly authorized deploying the application to the homelab with a private ingress. The target is `https://littlewardrobe.fruitiex.org`, attached only to the existing private Envoy gateway (`192.168.11.99`). Deployment uses the current homelab NFS CSI convention, a separate retained 5 GiB claim, SQLite DELETE journaling, fresh SOPS-encrypted bootstrap/encryption secrets, existing GHCR pull credentials and the immutable image from successful application CI `36922591167`.
-
-- [x] Inspect the current homelab, update the clean checkout and verify cluster/tool access.
-- [x] Prepare and validate private-only routing, retained storage, non-root deployment, SOPS round-trip and Kubernetes server schemas.
-- [x] Commit/push the homelab configuration and reconcile through Flux.
-- [x] Verify the running release, retained NFS data, trusted private HTTPS/PWA, anonymous access restrictions and public-gateway exclusion.
-- [x] Record the deployment result and first-owner instructions, then commit/push final documentation.
-
-Deployment result: homelab revision `273db55` reconciled successfully; Flux is Ready/Healthy with one ready replica, the exact published digest `sha256:1bc82975fe97a170ac5ee206a1caf25a01b9ea5f9df5828f785601f154dcca54` and a Bound retained NFS claim. The private HTTPRoute is Accepted/ResolvedRefs and DNS resolves to `192.168.11.99`. Trusted HTTPS and normal DNS readiness passed. Public gateway and WAN requests returned 404; anonymous private APIs/photos/SSE returned 401 and cross-origin writes returned 403. Mobile/desktop HTTPS setup and PWA checks passed without page errors or overflow. An initial consistent NFS database backup passed integrity and DELETE-journal checks. The family is empty and awaits first-owner setup; AI provider configuration remains external setup. First-login and operations instructions are in `~/homelab/apps/littlewardrobe/README.md`.
+Primary marketplace documentation establishes business-only integration routes, not an available personal-account publisher. The accepted fallback is implemented and documented in `docs/MARKETPLACES.md`. Provider credentials and a live personal companion remain external configuration. Private deployment and recovery instructions are in `docs/DEPLOYMENT.md`; templates do not alter the live cluster. At the initial implementation delivery, no marketplace publication or live deployment had occurred.
 
 ## Product copy cleanup — 2026-10-02
 
@@ -109,9 +97,7 @@ The user requested a distinct visual identity and the same personal AI connectio
 
 The visual refresh passed TypeScript, all 28 frontend tests, the PWA build and the complete two-device production browser suite. Screenshots include first-owner setup, photo/tag review, listing review and the actual mobile viewport. The profile is prepared with separate settings; a fresh personal sign-in is required because cloned single-use OAuth grants cannot safely be shared.
 
-The dedicated profile is signed in, paired to the existing household and active as a sandboxed user service. Production models/chat, real tag vision and private image generation passed. Both family workers passed independent native token refresh and production chat afterward. The refresh check exposed and repaired a shared helper incompatibility: general Hermes CLI pool loading imports an extra borrowed login, so workers now refresh only their owned grant under the local auth lock. Twelve offline companion tests cover ownership and concurrent renewal. The administrator activated the built Pear system generation; the enabled worker is now preserved through boot.
-
-Visual rollout completed through homelab revision `9fdc66e`, using application source `756b262` and immutable digest `sha256:5f0460674bae51c2d20e1301decbbcdaf4ba66d0a2128c01a1f5374076bd296e` from successful CI `36976223456`. Flux is Ready/Healthy, the exact image is running, and the HTTPRoute remains attached only to the private gateway with Accepted/ResolvedRefs conditions. Fresh 390px and 1440px HTTPS browser contexts verified the denim theme, bold headings, icon/manifest, active service worker, private session boundaries and no overflow or page errors. The production AI queue passed models/chat again after rollout. Consistent pre-upgrade backup `/data/pre-visual-20261002.sqlite3` passed integrity and DELETE journaling; all eight saved AI settings match. The fully built Pear generation is active with both workers enabled and no failed services. All follow-up milestones are complete.
+The dedicated profile is signed in, paired to the existing household and active as a sandboxed user service. Production models/chat, real tag vision and private image generation passed. Both family workers passed independent native token refresh and production chat afterward. The refresh check exposed and repaired a shared helper incompatibility: general Hermes CLI pool loading imports an extra borrowed login, so workers now refresh only their owned grant under the local auth lock. Twelve offline companion tests cover ownership and concurrent renewal. The worker runs as an enabled user service, preserved through reboots.
 
 ## Photo suggestion validation repair — 2026-10-13
 
@@ -124,7 +110,7 @@ The original prompt told the model to leave unknown text empty, and the schema a
 
 ## Little Cupboard ports and private updates — 2026-10-13
 
-The user authorized deploying the photo-suggestion repair, removed the repeated deployment approval requirement, and requested the useful Little Cupboard ports. Checked updates to the existing private instance are now authorized; LAN/VPN-only routing remains required.
+The user authorized deploying the photo-suggestion repair, removed the repeated deployment approval requirement, and requested the useful Little Cupboard ports. Checked updates to the existing private instance are now authorized; private-only routing remains required.
 
 - [x] Deploy and verify the checked photo-suggestion repair.
 - [x] Add durable background clothing-photo intake, persistent AI-review markers, safe retry/cancel, and preservation of original photos.
@@ -138,10 +124,6 @@ Implementation validation: the background queue stores original-photo entries an
 
 Release checks passed locally: 65 Rust tests, Clippy with warnings denied, Rust formatting, TypeScript, 29 frontend tests, 12 Python companion checks, Prettier and the frontend/PWA build. The complete production browser suite passed and the updated intake, listing and wardrobe screenshots were inspected. Publishing and live rollout completed as recorded below.
 
-The photo-suggestion repair is deployed through homelab `ecc33b5`, using source `fe05d38` and immutable digest `sha256:9fd22a232fe14ddd2cfae76307400fe6fc2dd4c7393eb2d86a88b122fc4d9f08` from successful CI `38425275235`. Flux is Ready/Healthy, the expected image is running and the retained NFS claim is Bound. Private HTTPRoute conditions are Accepted/ResolvedRefs; the public gateway returns 404. The consistent pre-upgrade backup is `/data/pre-photo-fix-20261013.sqlite3`. Ports source `fe0d6cc` was committed/pushed; the successful checked rollout is recorded below.
-
-Ports rollout completed through homelab `90f05e4`, using application source `fe0d6cc517fd4b6f325a88114fb6c4b5f239ac8b` and immutable digest `sha256:cda9dc974658e673ef51589ed608118411ccf95c6bd11e0c37399c770491f647` from successful CI `38428197988`. CI passed all checks and the expanded two-device browser suite against both the production build and packaged container. Flux is Ready/Healthy with the exact digest running, one ready replica, a Bound retained claim and the private-only HTTPRoute Accepted/ResolvedRefs. Fresh 390px and 1440px trusted HTTPS contexts verified the new background-photo bundle, active PWA, no page errors/overflow, denied anonymous state/photo/events/photo-job access and denied cross-origin photo-job writes. The public gateway still returns 404. Native production model discovery/chat passed after both rollouts.
-
 The consistent pre-upgrade backup is `/data/pre-photo-ports-20261013.sqlite3`; the post-upgrade verification backup is `/data/post-photo-ports-20261013.sqlite3`. Schema 7, SQLite integrity and DELETE journaling passed. Existing inventory, child/location configuration, photos and accounts were retained, and the encrypted provider configuration/secret checksum is identical. Production verification created no clothing or sale records. Temporary diagnostic database copies were removed. All port and rollout milestones are complete; checked future updates to this existing private instance remain authorized.
 
 ## Quick add and batch intake — 2026-10-13
@@ -154,14 +136,6 @@ The consistent pre-upgrade backup is `/data/pre-photo-ports-20261013.sqlite3`; t
 One Quick add creates one clothing entry from up to four photos. Reopening it retains the current filters for rapid intake of a child's clothes or a storage box. Text search is not a garment fact. Explicit filter values are kept while AI fills the remaining descriptive fields; children and locations stay household-scoped and are never sent to the model.
 
 Quick add implementation checks passed: 66 Rust tests, Clippy with warnings denied, Rust formatting, TypeScript, 29 frontend tests, 12 companion checks, Prettier and the frontend/PWA build. The expanded two-device production browser suite passed front+tag intake with all concrete filters selected and the AI provider held pending. It verified immediate submission/close, card spinners/review markers, reopening an unsubmitted photo draft, starting another piece with the same filters, reload, concurrent edits, guarded duplicate requests, retry, cancellation and review. Selected category/size/season values survive model output; household-owned child/location IDs are checked transactionally. Schema 8 stores the immutable accepted request independently of retried-job baselines. Real mobile modal/pending-list screenshots were inspected. Publishing and private rollout completed as recorded below.
-
-## Rack move and reboot verification — 2026-10-13
-
-Honeydew's Hermes gateway, dashboard and both family companion services are enabled and running after the reboot, with zero automatic restarts and no failed system/user units. Hermes's current runtime heartbeat reports Telegram, Discord and the API server connected. Both Little Wardrobe and Little Cupboard passed native production model discovery and chat using their existing independent personal profiles, `gpt-6-luna` and `xhigh` reasoning. Brief companion connection warnings occurred during network startup and recovered before the successful requests. Little Wardrobe's running pod, Flux reconciliation, retained NFS claim and private HTTPRoute are healthy; trusted HTTPS readiness succeeds and the public gateway still returns 404. No clothing, listing or external chat message was created by these checks. The previously committed Quick add release subsequently passed container verification and was deployed as recorded below.
-
-Quick add rollout completed through homelab `e486524`, using source `b5141327c7df2f53a03bdd0aa3f75386edfeedb1` and immutable digest `sha256:f998f5b97dd56fe2e5f38932f02ce73c06f283a087d58acdeb1972a9ac4b7c56` from successful CI `38441068183`. CI passed all checks, including the expanded two-device browser suite against the packaged container. Flux is Ready/Healthy with the exact image and one ready replica. Fresh 390px/1440px trusted HTTPS browsers verified the new Quick add bundle, active PWA, no errors/overflow, denied anonymous state/photo/events/photo-job access and rejected cross-origin photo-job writes. Public gateway access still returns 404. Native production model discovery/chat succeeded after the update.
-
-The consistent pre-rollout backup is `/data/pre-quick-add-rollout-20261013.sqlite3`; the post-rollout backup is `/data/post-quick-add-20261013.sqlite3`. Schema 8, the immutable request column, SQLite integrity and DELETE journaling passed. Clothing, children, locations, listings, photos and accounts were retained; the encrypted provider configuration/secret checksum matches. Temporary diagnostic database copies were removed. No production clothing/listing or external chat message was created during verification. The reboot checks and all Quick add milestones are complete.
 
 ## Passkey sign-in — 2026-10-23
 
