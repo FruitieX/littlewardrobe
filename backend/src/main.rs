@@ -259,7 +259,7 @@ async fn main() -> std::result::Result<(), Box<dyn std::error::Error>> {
             return Err("Backup destination already exists; choose a new path".into());
         }
         let conn = rusqlite::Connection::open(data_dir.join("littlewardrobe.sqlite3"))?;
-        conn.backup("main", &destination, None)?;
+        conn.backup("main", &destination, rusqlite::backup::NO_PROGRESS)?;
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;

@@ -198,7 +198,7 @@ mod tests {
         let backup = directory.path().join("backup.sqlite3");
         Connection::open(&path)
             .unwrap()
-            .backup("main", &backup, None)
+            .backup("main", &backup, rusqlite::backup::NO_PROGRESS)
             .unwrap();
         drop(database);
         for file in [&path, &backup] {

@@ -3,14 +3,14 @@ use crate::{
     error::{ApiError, Result},
     model::{Member, SessionInfo},
 };
-use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier, password_hash::SaltString};
+use argon2::{Argon2, PasswordHash, PasswordHasher, PasswordVerifier};
 use axum::{
     Json,
     extract::{Path, State},
     http::{HeaderMap, StatusCode, header::SET_COOKIE},
 };
 use chrono::Utc;
-use rand::{RngCore, rngs::OsRng};
+use rand::Rng;
 use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -19,11 +19,14 @@ use uuid::Uuid;
 
 pub fn token() -> String {
     let mut bytes = [0u8; 32];
-    OsRng.fill_bytes(&mut bytes);
+    rand::rng().fill_bytes(&mut bytes);
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
 pub fn digest(value: &str) -> String {
-    format!("{:x}", Sha256::digest(value.as_bytes()))
+    Sha256::digest(value.as_bytes())
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect()
 }
 pub fn email(value: &str) -> Result<String> {
     let value = value.trim().to_lowercase();
@@ -60,7 +63,7 @@ async fn hash_password(value: String) -> Result<String> {
     let _permit = AUTH_SLOTS.acquire().await.map_err(ApiError::internal)?;
     tokio::task::spawn_blocking(move || {
         Argon2::default()
-            .hash_password(value.as_bytes(), &SaltString::generate(&mut OsRng))
+            .hash_password(value.as_bytes())
             .map(|hash| hash.to_string())
             .map_err(ApiError::internal)
     })
@@ -609,10 +612,7 @@ pub async fn remove_member(
 
 pub fn dummy_hash() -> String {
     Argon2::default()
-        .hash_password(
-            b"dummy-account-password-only",
-            &SaltString::generate(&mut OsRng),
-        )
+        .hash_password(b"dummy-account-password-only")
         .expect("Argon2 dummy hash")
         .to_string()
 }

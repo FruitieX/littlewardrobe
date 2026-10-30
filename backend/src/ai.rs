@@ -14,7 +14,7 @@ use axum::{
 use base64::{Engine, engine::general_purpose::STANDARD};
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce, aead::Aead};
 use chrono::Utc;
-use rand::{RngCore, rngs::OsRng};
+use rand::Rng;
 use rusqlite::{OptionalExtension, params};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -138,9 +138,9 @@ fn validate_config(config: &ProviderConfig) -> Result<()> {
 fn encrypt(server: &Server, secret: &str) -> Result<String> {
     let cipher = ChaCha20Poly1305::new((&server.config.encryption_key).into());
     let mut nonce = [0u8; 12];
-    OsRng.fill_bytes(&mut nonce);
+    rand::rng().fill_bytes(&mut nonce);
     let ciphertext = cipher
-        .encrypt(Nonce::from_slice(&nonce), secret.as_bytes())
+        .encrypt(&Nonce::from(nonce), secret.as_bytes())
         .map_err(|_| ApiError::internal("secret encryption failed"))?;
     Ok(STANDARD.encode([nonce.as_slice(), ciphertext.as_slice()].concat()))
 }
@@ -151,12 +151,13 @@ fn decrypt(server: &Server, secret: &str) -> Result<String> {
     if bytes.len() < 13 {
         return Err(ApiError::internal("invalid encrypted provider secret"));
     }
+    let (nonce, ciphertext) = bytes.split_at(12);
+    let nonce = Nonce::try_from(nonce)
+        .map_err(|_| ApiError::internal("invalid encrypted provider secret"))?;
     let cipher = ChaCha20Poly1305::new((&server.config.encryption_key).into());
-    let clear = cipher
-        .decrypt(Nonce::from_slice(&bytes[..12]), &bytes[12..])
-        .map_err(|_| {
-            ApiError::internal("cannot decrypt provider secret; verify persistent application key")
-        })?;
+    let clear = cipher.decrypt(&nonce, ciphertext).map_err(|_| {
+        ApiError::internal("cannot decrypt provider secret; verify persistent application key")
+    })?;
     String::from_utf8(clear).map_err(ApiError::internal)
 }
 pub fn provision_companion(
